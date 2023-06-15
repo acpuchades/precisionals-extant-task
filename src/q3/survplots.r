@@ -1,11 +1,13 @@
 suppressPackageStartupMessages({
     library(dplyr)
-    library(survival)
+    library(ggplot2)
     library(ggsurvfit)
     library(lubridate)
     library(magrittr)
     library(progress)
     library(rlang)
+    library(stringr)
+    library(survival)
     library(xfun)
 })
 
@@ -15,20 +17,6 @@ source("src/q3/common.r")
 q3_survplots_output_width <- 7
 q3_survplots_output_height <- 7
 q3_survplots_output_dpi <- 300
-
-q3_survplots_filter_data <- function(data, event, origin, by) {
-    data %<>% filter(event == .env$event, origin == .env$origin)
-
-    if (by == "causal_gene") {
-        data %>% filter(causal_gene != "Multiple")
-    } else if (by == "site_of_onset") {
-        data %>% filter(site_of_onset %in% c(
-            "Bulbar", "Respiratory", "Spinal"
-        ))
-    } else {
-        data
-    }
-}
 
 q3_origin_labels <- list(
     birth = "birth",
@@ -60,8 +48,7 @@ q3_event_labels <- list(
     death = "death"
 )
 
-q3_subgroup_labels <- list(
-    "@overall" = "overall",
+q3_group_labels <- list(
     site = "site",
     sex = "sex",
     age_at_onset = "age at onset",
@@ -74,10 +61,94 @@ q3_subgroup_labels <- list(
     site_of_onset = "site of onset"
 )
 
-q3_epoch_units <- list(
-    birth = "years",
-    .otherwise = "months"
+q3_plots <- list(
+    list(
+        origins = "birth",
+        events = "onset",
+        unit = "years",
+        output_path = "@overall/time-from-{origin}-to-{event}.png"
+    ),
+    list(
+        origins = "onset",
+        events = names(q3_event_labels),
+        output_path = "@overall/time-from-{origin}-to-{event}.png"
+    ),
+    list(
+        origins = "birth",
+        events = "onset",
+        groups = names(q3_group_labels),
+        unit = "years",
+        output_path = "{group}/time-from-{origin}-to-{event}.png"
+    ),
+    list(
+        origins = "onset",
+        events = names(q3_event_labels),
+        groups = names(q3_group_labels),
+        output_path = "{group}/time-from-{origin}-to-{event}.png"
+    )
 )
+
+q3_survplots_total_count <- function(plots) {
+    count <- 0
+    for (p in plots) {
+        n_events <- length(p$events)
+        n_origins <- length(p$origins)
+        n_groups <- length(p$groups %||% list(NULL))
+        n_plots <- n_events * n_origins * n_groups
+        count <- count + n_plots
+    }
+    count
+}
+
+q3_survplots_filter_data_groups <- function(data, group) {
+    if (group == "causal_gene") {
+        data %>% filter(causal_gene != "Multiple")
+    } else if (group == "site_of_onset") {
+        data %>% filter(site_of_onset %in% c(
+            "Bulbar", "Respiratory", "Spinal"
+        ))
+    } else {
+        data
+    }
+}
+
+q3_survplots_make_plot <- function(data, origin, event,
+                                   group = NULL, unit = "months") {
+    event_lbl <- q3_event_labels[[event]]
+    origin_lbl <- q3_origin_labels[[origin]]
+    title <- q3_str_to_title(event_lbl)
+    xlab <- str_glue("Time from {origin_lbl}, {unit}")
+
+    data %<>%
+        filter(.data$origin == .env$origin, .data$event == .env$event) %>%
+        mutate(duration = duration / lubridate::duration(1, unit))
+
+    if (is.null(group)) {
+        km_fit <- survfit2(Surv(duration, status == "event") ~ 1, data)
+        km_plot <- ggsurvfit(km_fit) + add_quantile()
+    } else {
+        group_lbl <- q3_group_labels[[group]]
+        data %<>% q3_survplots_filter_data_groups(group)
+        km_fit <- survfit2(as.formula(
+            str_glue("Surv(duration, status == 'event') ~ {group}")
+        ), data)
+        km_plot <- ggsurvfit(km_fit) +
+            add_pvalue("annotation") +
+            add_legend_title(q3_str_to_sentence(group_lbl))
+    }
+    km_plot +
+        scale_ggsurvfit() +
+        add_confidence_interval() +
+        labs(title = title, x = xlab)
+}
+
+q3_survplot_save_plot <- function(plot, path, width = q3_survplots_output_width,
+                                  height = q3_survplots_output_height,
+                                  dpi = q3_survplots_output_dpi) {
+    dir.create(dirname(path), showWarnings = FALSE, recursive = TRUE)
+    ggsave(path, plot, width = width, height = height, dpi = dpi)
+}
+
 
 q3_data_path <- "output/q3/time-to-event.rds"
 if (!file.exists(q3_data_path)) {
@@ -87,57 +158,32 @@ q3_data <- readRDS(q3_data_path)
 
 progress_bar <- progress::progress_bar$new(
     format = "exporting [:bar] :current/:total (:percent)",
-    total = length(q3_origin_labels) * length(q3_event_labels) * length(q3_subgroup_labels)
+    total = q3_survplots_total_count(q3_plots)
 )
 
 progress_bar$tick(0)
-for (origin in names(q3_origin_labels)) {
-    orig_label <- q3_origin_labels[[origin]]
-    epoch_unit <- q3_epoch_units[[origin]] %||% q3_epoch_units$.otherwise
-    for (group in names(q3_subgroup_labels)) {
-        grp_label <- q3_subgroup_labels[[group]]
-        for (event in names(q3_event_labels)) {
-            evt_label <- q3_event_labels[[event]]
+for (p in q3_plots) {
+    for (origin in p$origins) {
+        epoch_unit <- p$unit %||% "months"
+        for (event in p$events) {
             if (!q3_is_valid_event_from_origin(event, origin)) {
-                progress_bar$tick()
+                progress_bar$tick(length(p$groups %||% list(NULL)))
                 next
             }
 
-            title <- q3_str_to_title(evt_label)
-            xlab <- str_glue("Time from {orig_label}, {epoch_unit}")
-            data <- q3_data %>% q3_survplots_filter_data(
-                event = event, origin = origin, by = group
-            )
-            data$duration <- data$duration / duration(1, epoch_unit)
-
-            if (group == "@overall") {
-                output_name <- str_glue("time-from-{origin}-to-{event}")
-                km_fit <- survfit2(Surv(duration, status == "event") ~ 1, data)
-                p <- ggsurvfit(km_fit) + add_quantile()
+            if (!exists("groups", p)) {
+                plot <- q3_survplots_make_plot(q3_data, origin, event, unit = epoch_unit)
+                output_path <- file.path("output", "q3", str_glue(p$output_path))
+                q3_survplot_save_plot(plot, output_path)
+                progress_bar$tick()
             } else {
-                output_name <- str_glue("time-from-{origin}-to-{event}-by-{group}")
-                km_fit <- survfit2(as.formula(
-                    str_glue("Surv(duration, status == 'event') ~ {group}")
-                ), data)
-                p <- ggsurvfit(km_fit) +
-                    add_pvalue("annotation") +
-                    add_legend_title(q3_str_to_sentence(grp_label))
+                for (group in p$groups) {
+                    plot <- q3_survplots_make_plot(q3_data, origin, event, group, unit = epoch_unit)
+                    output_path <- file.path("output", "q3", str_glue(p$output_path))
+                    q3_survplot_save_plot(plot, output_path)
+                    progress_bar$tick()
+                }
             }
-
-            p +
-                scale_ggsurvfit() +
-                add_confidence_interval() +
-                labs(title = title, x = xlab)
-
-            grp_dir <- file.path("output/q3", group)
-            dir.create(grp_dir, showWarnings = FALSE)
-            output_path <- file.path(grp_dir, output_name %>% with_ext(".png"))
-            ggsave(output_path,
-                width = q3_survplots_output_width,
-                height = q3_survplots_output_height,
-                dpi = q3_survplots_output_dpi
-            )
-            progress_bar$tick()
         }
     }
 }
