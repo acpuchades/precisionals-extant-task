@@ -52,6 +52,7 @@ q3_group_labels <- list(
     site = "site",
     sex = "sex",
     age_at_onset = "age at onset",
+    clinical_phenotype = "clinical phenotype",
     progression_category = "progression category",
     c9orf72_status = "C9orf72 status",
     sod1_status = "SOD1 status",
@@ -103,6 +104,11 @@ q3_survival_plot_count <- function(plots) {
 q3_prepare_data <- function(data, group) {
     if (group == "causal_gene") {
         data %>% filter(causal_gene != "Multiple")
+    } else if (group == "clinical_phenotype") {
+        data %>% filter(clinical_phenotype %in% c(
+            "ALS", "PBP", "PLS", "PMA",
+            "LMN-Predominant", "UMN-Predominant"
+        ))
     } else if (group == "site_of_onset") {
         data %>% filter(site_of_onset %in% c(
             "Bulbar", "Respiratory", "Spinal"

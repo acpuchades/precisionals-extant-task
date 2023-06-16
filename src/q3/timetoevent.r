@@ -462,7 +462,8 @@ q3_subgroups <- ext_main %>%
         tardbp_status,
         causal_gene,
         site_of_onset,
-        progression_category
+        progression_category,
+        clinical_phenotype
     )
 
 q3_data <- q3_subgroups %>%

@@ -182,5 +182,23 @@ ext_main <- ext_load_data(
             str_ends(site_of_onset, " D") ~ "R",
             str_ends(site_of_onset, " G") ~ "L",
             str_ends(site_of_onset, " Bilat") ~ "B"
+        ),
+        clinical_phenotype = case_match(
+            diagnosis,
+            "ALS" ~ case_match(
+                motor_neuron_predominance,
+                "LMN" ~ "LMN-Predominant",
+                "UMN" ~ "UMN-Predominant",
+                .default = "ALS"
+            ),
+            "ALS/FTD" ~ "ALS/FTD",
+            "FTD" ~ "FTD",
+            "Flail arm" ~ "Flail-Arm",
+            "Flail leg" ~ "Flail-Leg",
+            "LMN Predominant ALS" ~ "LMN-Predominant",
+            "UMN Predominant ALS" ~ "UMN-Predominant",
+            "PBP" ~ "PBP",
+            "PMA" ~ "PMA",
+            c("PLS", "PLS/ALS") ~ "PLS"
         )
     )
