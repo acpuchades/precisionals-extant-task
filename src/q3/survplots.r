@@ -88,7 +88,7 @@ q3_plots <- list(
     )
 )
 
-q3_survplots_total_count <- function(plots) {
+q3_survival_plot_count <- function(plots) {
     count <- 0
     for (p in plots) {
         n_events <- length(p$events)
@@ -100,7 +100,7 @@ q3_survplots_total_count <- function(plots) {
     count
 }
 
-q3_survplots_filter_data_groups <- function(data, group) {
+q3_prepare_data <- function(data, group) {
     if (group == "causal_gene") {
         data %>% filter(causal_gene != "Multiple")
     } else if (group == "site_of_onset") {
@@ -112,8 +112,7 @@ q3_survplots_filter_data_groups <- function(data, group) {
     }
 }
 
-q3_survplots_make_plot <- function(data, origin, event,
-                                   group = NULL, unit = "months") {
+q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "months") {
     event_lbl <- q3_event_labels[[event]]
     origin_lbl <- q3_origin_labels[[origin]]
     title <- q3_str_to_title(event_lbl)
@@ -128,7 +127,7 @@ q3_survplots_make_plot <- function(data, origin, event,
         km_plot <- ggsurvfit(km_fit) + add_quantile()
     } else {
         group_lbl <- q3_group_labels[[group]]
-        data %<>% q3_survplots_filter_data_groups(group)
+        data %<>% q3_prepare_data(group)
         km_fit <- survfit2(as.formula(
             str_glue("Surv(duration, status == 'event') ~ {group}")
         ), data)
@@ -142,9 +141,9 @@ q3_survplots_make_plot <- function(data, origin, event,
         labs(title = title, x = xlab)
 }
 
-q3_survplot_save_plot <- function(plot, path, width = q3_survplots_output_width,
-                                  height = q3_survplots_output_height,
-                                  dpi = q3_survplots_output_dpi) {
+q3_save_plot <- function(plot, path, width = q3_survplots_output_width,
+                         height = q3_survplots_output_height,
+                         dpi = q3_survplots_output_dpi) {
     dir.create(dirname(path), showWarnings = FALSE, recursive = TRUE)
     ggsave(path, plot, width = width, height = height, dpi = dpi)
 }
@@ -158,7 +157,7 @@ q3_data <- readRDS(q3_data_path)
 
 progress_bar <- progress::progress_bar$new(
     format = "exporting [:bar] :current/:total (:percent)",
-    total = q3_survplots_total_count(q3_plots)
+    total = q3_survival_plot_count(q3_plots)
 )
 
 progress_bar$tick(0)
@@ -172,15 +171,15 @@ for (p in q3_plots) {
             }
 
             if (!exists("groups", p)) {
-                plot <- q3_survplots_make_plot(q3_data, origin, event, unit = epoch_unit)
+                plot <- q3_make_survival_plot(q3_data, origin, event, unit = epoch_unit)
                 output_path <- file.path("output", "q3", str_glue(p$output_path))
-                q3_survplot_save_plot(plot, output_path)
+                q3_save_plot(plot, output_path)
                 progress_bar$tick()
             } else {
                 for (group in p$groups) {
-                    plot <- q3_survplots_make_plot(q3_data, origin, event, group, unit = epoch_unit)
+                    plot <- q3_make_survival_plot(q3_data, origin, event, group, unit = epoch_unit)
                     output_path <- file.path("output", "q3", str_glue(p$output_path))
-                    q3_survplot_save_plot(plot, output_path)
+                    q3_save_plot(plot, output_path)
                     progress_bar$tick()
                 }
             }
