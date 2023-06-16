@@ -9,9 +9,7 @@ source("src/ext/main.r")
 
 ext_alsfrs_clean <- function(data) {
     data %>%
-        drop_na(total_score) %>%
-        filter(total_score >= 0) %>%
-        mutate(total_score = if_else(total_score %>% between(0, 48), total_score, 33)) %>%
+        mutate(total_score = if_else(total_score %>% between(0, 48), total_score, NA_real_)) %>%
         ext_rows_delete(tibble(id = "BEL-0461", date_of_assessment = ymd("2011-01-20")), by = c("id", "date_of_assessment")) %>%
         ext_rows_delete(tibble(id = "BEL-0559", date_of_assessment = ymd("2011-12-20")), by = c("id", "date_of_assessment")) %>%
         ext_rows_delete(tibble(id = "BEL-0627", date_of_assessment = ymd("2015-04-30")), by = c("id", "date_of_assessment")) %>%
@@ -218,8 +216,8 @@ ext_baseline <- ext_main %>%
 ext_alsfrs %<>% ext_alsfrs_calculate_assessment_times(ext_baseline)
 ext_alsfrs_premorbid <- filter(ext_alsfrs, time_from_baseline < ddays(0))
 
-ext_baseline_deltafs_p25 <- quantile(ext_baseline$delta_fs, .25)
-ext_baseline_deltafs_p75 <- quantile(ext_baseline$delta_fs, .75)
+ext_baseline_deltafs_p25 <- quantile(ext_baseline$delta_fs, .25, na.rm = TRUE)
+ext_baseline_deltafs_p75 <- quantile(ext_baseline$delta_fs, .75, na.rm = TRUE)
 
 ext_baseline %<>% mutate(
     progression_category = case_when(
