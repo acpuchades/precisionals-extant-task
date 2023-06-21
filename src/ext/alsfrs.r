@@ -220,12 +220,16 @@ ext_baseline_deltafs_p25 <- quantile(ext_baseline$delta_fs, .25, na.rm = TRUE)
 ext_baseline_deltafs_p75 <- quantile(ext_baseline$delta_fs, .75, na.rm = TRUE)
 
 ext_baseline %<>% mutate(
-    progression_category = case_when(
-        delta_fs < ext_baseline_deltafs_p25 ~ "Slow",
-        delta_fs %>% between(
-            ext_baseline_deltafs_p25,
-            ext_baseline_deltafs_p75
-        ) ~ "Intermediate",
-        delta_fs >= ext_baseline_deltafs_p75 ~ "Fast"
+    progression_category = factor(
+        case_when(
+            delta_fs < ext_baseline_deltafs_p25 ~ "Slow",
+            delta_fs %>% between(
+                ext_baseline_deltafs_p25,
+                ext_baseline_deltafs_p75
+            ) ~ "Intermediate",
+            delta_fs > ext_baseline_deltafs_p75 ~ "Fast"
+        ),
+        levels = c("Slow", "Intermediate", "Fast"),
+        ordered = TRUE
     )
 )
