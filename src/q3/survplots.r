@@ -66,20 +66,18 @@ q3_plots <- list(
     list(
         origins = "birth",
         events = "onset",
-        unit = "years",
-        output_path = "@overall/time-from-{origin}-to-{event}.png"
-    ),
-    list(
-        origins = "onset",
-        events = names(q3_event_labels),
         output_path = "@overall/time-from-{origin}-to-{event}.png"
     ),
     list(
         origins = "birth",
         events = "onset",
         groups = names(q3_group_labels),
-        unit = "years",
         output_path = "{group}/time-from-{origin}-to-{event}.png"
+    ),
+    list(
+        origins = "onset",
+        events = names(q3_event_labels),
+        output_path = "@overall/time-from-{origin}-to-{event}.png"
     ),
     list(
         origins = "onset",
@@ -101,7 +99,7 @@ q3_survival_plot_count <- function(plots) {
     count
 }
 
-q3_prepare_data <- function(data, group) {
+q3_trim_survival_groups <- function(data, group) {
     if (group == "causal_gene") {
         data %>% filter(causal_gene != "Multiple")
     } else if (group == "clinical_phenotype") {
@@ -118,9 +116,9 @@ q3_prepare_data <- function(data, group) {
     }
 }
 
-q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "months") {
-    event_lbl <- q3_event_labels[[event]]
+q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "years") {
     origin_lbl <- q3_origin_labels[[origin]]
+    event_lbl <- q3_event_labels[[event]]
     title <- q3_str_to_title(event_lbl)
     xlab <- str_glue("Time from {origin_lbl}, {unit}")
 
@@ -133,14 +131,16 @@ q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "mon
         km_plot <- ggsurvfit(km_fit) + add_quantile()
     } else {
         group_lbl <- q3_group_labels[[group]]
-        data %<>% q3_prepare_data(group)
+        data %<>% q3_trim_survival_groups(group)
         km_fit <- survfit2(as.formula(
             str_glue("Surv(duration, status == 'event') ~ {group}")
         ), data)
+
         km_plot <- ggsurvfit(km_fit) +
             add_pvalue("annotation") +
             add_legend_title(q3_str_to_sentence(group_lbl))
     }
+
     km_plot +
         scale_ggsurvfit() +
         add_confidence_interval() +
@@ -169,25 +169,20 @@ progress_bar <- progress::progress_bar$new(
 progress_bar$tick(0)
 for (p in q3_plots) {
     for (origin in p$origins) {
-        epoch_unit <- p$unit %||% "months"
+        epoch_unit <- p$unit %||% "years"
         for (event in p$events) {
             if (!q3_is_valid_event_from_origin(event, origin)) {
-                progress_bar$tick(length(p$groups %||% list(NULL)))
+                skip_groups <- length(p$groups %||% list(NULL))
+                skip_facets <- length(p$facets %||% list(NULL))
+                progress_bar$tick(skip_groups * skip_facets)
                 next
             }
 
-            if (!exists("groups", p)) {
-                plot <- q3_make_survival_plot(q3_data, origin, event, unit = epoch_unit)
+            for (group in p$groups %||% list(NULL)) {
+                plot <- q3_make_survival_plot(q3_data, origin, event, group, epoch_unit)
                 output_path <- file.path("output", "q3", str_glue(p$output_path))
                 q3_save_plot(plot, output_path)
                 progress_bar$tick()
-            } else {
-                for (group in p$groups) {
-                    plot <- q3_make_survival_plot(q3_data, origin, event, group, unit = epoch_unit)
-                    output_path <- file.path("output", "q3", str_glue(p$output_path))
-                    q3_save_plot(plot, output_path)
-                    progress_bar$tick()
-                }
             }
         }
     }
