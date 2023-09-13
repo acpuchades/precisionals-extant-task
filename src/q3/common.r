@@ -1,5 +1,14 @@
 library(dplyr)
+library(forcats)
 library(stringr)
+
+q3_as_causal_gene <- function(x) {
+    factor(x) %>% fct_relevel("Unknown")
+}
+
+q3_as_site_of_onset <- function(x) {
+    factor(x) %>% fct_relevel("Spinal")
+}
 
 q3_str_restore_allcaps <- function(s) {
     s %>%

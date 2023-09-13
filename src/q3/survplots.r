@@ -12,11 +12,14 @@ suppressPackageStartupMessages({
 })
 
 source("src/ext/resp.r")
+
 source("src/q3/common.r")
+source("src/q3/timetoevent.r")
 
 q3_survplots_output_width <- 7
 q3_survplots_output_height <- 7
 q3_survplots_output_dpi <- 300
+q3_survplots_output_format <- "png"
 
 q3_origin_labels <- list(
     birth = "birth",
@@ -51,7 +54,7 @@ q3_event_labels <- list(
 q3_group_labels <- list(
     site = "site",
     sex = "sex",
-    age_at_onset = "age at onset",
+    age_category = "age at onset",
     clinical_phenotype = "clinical phenotype",
     progression_category = "progression category",
     c9orf72_status = "C9orf72 status",
@@ -66,24 +69,24 @@ q3_plots <- list(
     list(
         origins = "birth",
         events = "onset",
-        output_path = "@overall/time-from-{origin}-to-{event}.png"
+        output_name = "@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "birth",
         events = "onset",
         groups = names(q3_group_labels),
-        output_path = "{group}/time-from-{origin}-to-{event}.png"
+        output_name = "{group}/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "onset",
         events = names(q3_event_labels),
-        output_path = "@overall/time-from-{origin}-to-{event}.png"
+        output_name = "@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "onset",
         events = names(q3_event_labels),
         groups = names(q3_group_labels),
-        output_path = "{group}/time-from-{origin}-to-{event}.png"
+        output_name = "{group}/time-from-{origin}-to-{event}"
     )
 )
 
@@ -154,15 +157,8 @@ q3_save_plot <- function(plot, path, width = q3_survplots_output_width,
     ggsave(path, plot, width = width, height = height, dpi = dpi)
 }
 
-
-q3_data_path <- "output/q3/time-to-event.rds"
-if (!file.exists(q3_data_path)) {
-    source("src/q3/timetoevent.r")
-}
-q3_data <- readRDS(q3_data_path)
-
 progress_bar <- progress::progress_bar$new(
-    format = "exporting [:bar] :current/:total (:percent)",
+    format = "Exporting [:bar] :current/:total (:percent)",
     total = q3_survival_plot_count(q3_plots)
 )
 
@@ -180,8 +176,8 @@ for (p in q3_plots) {
 
             for (group in p$groups %||% list(NULL)) {
                 plot <- q3_make_survival_plot(q3_data, origin, event, group, epoch_unit)
-                output_path <- file.path("output", "q3", str_glue(p$output_path))
-                q3_save_plot(plot, output_path)
+                output_fname <- str_glue(p$output_name) %>% with_ext(q3_survplots_output_format)
+                q3_save_plot(plot, file.path("output", "q3", output_fname))
                 progress_bar$tick()
             }
         }
