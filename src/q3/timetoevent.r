@@ -442,6 +442,7 @@ if (file.exists(q3_output_data_path)) {
                     "50-59", "60-69", "70-79", "80+"
                 )
             ),
+            c9orf72_status, sod1_status, fus_status, tardbp_status,
             causal_gene = q3_as_causal_gene(case_when(
                 altered_genes > 1 ~ "Multiple",
                 c9orf72_status == "Positive" ~ "C9orf72",
@@ -458,15 +459,7 @@ if (file.exists(q3_output_data_path)) {
                 respiratory_onset ~ "Respiratory",
                 spinal_onset ~ "Spinal",
                 TRUE ~ "Other"
-            )),
-            across(
-                c(c9orf72_status, sod1_status, tardbp_status, fus_status),
-                ~ case_when(
-                    .x == "Negative" & causal_gene != "Unknown" ~ "Negative (known gene)",
-                    .x == "Negative" & causal_gene == "Unknown" ~ "Negative (unknown gene)",
-                    TRUE ~ .x
-                )
-            )
+            ))
         )
 
     q3_data <- q3_base %>%

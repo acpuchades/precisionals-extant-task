@@ -162,6 +162,14 @@ progress_bar <- progress::progress_bar$new(
     total = q3_survival_plot_count(q3_plots)
 )
 
+q3_data <- q3_data %>% mutate(across(
+    c(c9orf72_status, sod1_status, tardbp_status, fus_status), ~ case_when(
+        .x == "Negative" & causal_gene != "Unknown" ~ "Negative (known gene)",
+        .x == "Negative" & causal_gene == "Unknown" ~ "Negative (unknown gene)",
+        TRUE ~ .x
+    )
+))
+
 progress_bar$tick(0)
 for (p in q3_plots) {
     for (origin in p$origins) {
