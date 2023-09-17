@@ -6,13 +6,15 @@ suppressPackageStartupMessages({
     library(rlang)
     library(stringr)
     library(tidyr)
-    library(writexl)
-    library(xfun)
 })
 
 q3_output_data_path <- "output/q3/timetoevent.rds"
 
 source("src/q3/common.r")
+
+q3_as_causal_gene <- function(x) {
+    factor(x) %>% fct_relevel("Unknown")
+}
 
 if (file.exists(q3_output_data_path)) {
     message("Loading cached time to event data...", appendLF = FALSE)
@@ -451,7 +453,7 @@ if (file.exists(q3_output_data_path)) {
                 tardbp_status == "Positive" ~ "TARDBP",
                 TRUE ~ "Unknown"
             )),
-            site_of_onset = q3_as_site_of_onset(case_when(
+            site_of_onset = factor(case_when(
                 is.na(site_of_onset) ~ "Unknown",
                 onset_sites > 1 ~ "Multiple",
                 bulbar_onset ~ "Bulbar",

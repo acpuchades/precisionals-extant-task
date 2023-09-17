@@ -7,6 +7,13 @@ suppressPackageStartupMessages({
 
 source("src/ext/main.r")
 
+ext_as_progression_category <- function(x) {
+    x %>% factor(
+        levels = c("Slow", "Intermediate", "Fast"),
+        ordered = TRUE
+    )
+}
+
 ext_alsfrs_clean <- function(data) {
     data %>%
         mutate(total_score = if_else(total_score %>% between(0, 48), total_score, NA_real_)) %>%
@@ -228,7 +235,7 @@ ext_baseline_deltafs_p25 <- quantile(ext_baseline$delta_fs, .25, na.rm = TRUE)
 ext_baseline_deltafs_p75 <- quantile(ext_baseline$delta_fs, .75, na.rm = TRUE)
 
 ext_baseline %<>% mutate(
-    progression_category = factor(
+    progression_category = ext_as_progression_category(
         case_when(
             delta_fs < ext_baseline_deltafs_p25 ~ "Slow",
             delta_fs %>% between(
@@ -236,8 +243,6 @@ ext_baseline %<>% mutate(
                 ext_baseline_deltafs_p75
             ) ~ "Intermediate",
             delta_fs > ext_baseline_deltafs_p75 ~ "Fast"
-        ),
-        levels = c("Slow", "Intermediate", "Fast"),
-        ordered = TRUE
+        )
     )
 )

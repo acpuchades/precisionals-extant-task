@@ -147,7 +147,7 @@ q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "yea
     km_plot +
         scale_ggsurvfit() +
         add_confidence_interval() +
-        labs(title = title, x = xlab)
+        labs(title = title, x = xlab, y = NULL)
 }
 
 q3_save_plot <- function(plot, path, width = q3_survplots_output_width,
