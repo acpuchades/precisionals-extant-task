@@ -189,6 +189,14 @@ ext_alsfrs <- suppressWarnings(
     rename_with(~ str_replace(.x, "x(\\d+[abx]?)_", "q\\1_")) %>%
     rename_with(~ str_replace_all(.x, "hygine", "hygiene")) %>%
     rename(age_at_assessment = "age_of_assessment") %>%
+    left_join(ext_main %>% select(id, date_of_birth), by = "id") %>%
+    mutate(
+        age_at_assessment = coalesce(
+            age_at_assessment,
+            (date_of_assessment - date_of_birth) / dyears(1)
+        )
+    ) %>%
+    select(-date_of_birth) %>%
     filter(!is.na(date_of_assessment) | !is.na(age_at_assessment)) %>%
     ext_alsfrs_clean()
 
