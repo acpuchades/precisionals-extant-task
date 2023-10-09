@@ -130,13 +130,13 @@ ext_main <- ext_load_data(
             age_at_last_follow_up,
             calculated_age_from_date_of_last_follow_up
         ),
-        bulbar_onset = site_of_onset %in% c(
+        bulbar_onset = diagnosis == "PBP" | site_of_onset %in% c(
             "Bulbar", "Bulbaire", "Bulbar and Spinal",
             "Bulbar and Spinal",
             "Bulbar and Cognitive/Behavioural",
             "Bulbar and Thoracic/Respiratory",
             "Cognitive/Behavioural and Bulbar",
-            "PBP"
+            "PBP", "Generalized"
         ),
         spinal_onset = site_of_onset %in% c(
             "Arms", "Cervical",
@@ -157,7 +157,8 @@ ext_main <- ext_load_data(
             "Membre supérieur proximal Bilat",
             "Membre supérieur proximal D",
             "Neck", "Upper limb", "Lower limb",
-            "Flail-Leg", "Flail-Arm", "Hemiplegic"
+            "Flail-Leg", "Flail-Arm", "Hemiplegic",
+            "Generalized"
         ),
         respiratory_onset = site_of_onset %in% c(
             "Bulbar and Thoracic/Respiratory",
@@ -167,7 +168,7 @@ ext_main <- ext_load_data(
             "Thoracic/Respiratory",
             "Thoracic/Respiratory and Spinal"
         ),
-        cognitive_onset = site_of_onset %in% c(
+        cognitive_onset = diagnosis == "FTD" | site_of_onset %in% c(
             "Cognitive",
             "Cognitive/Behavioural",
             "Cognitive/Behavioural and Bulbar",
