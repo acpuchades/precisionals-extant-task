@@ -108,12 +108,11 @@ q3_trim_survival_groups <- function(data, group) {
     } else if (group == "clinical_phenotype") {
         data %>% filter(clinical_phenotype %in% c(
             "ALS", "PBP", "PLS", "PMA",
+            "Flail-Arm", "Flail-Leg",
             "LMN-Predominant", "UMN-Predominant"
         ))
     } else if (group == "site_of_onset") {
-        data %>% filter(site_of_onset %in% c(
-            "Bulbar", "Respiratory", "Spinal"
-        ))
+        data %>% filter(site_of_onset != "Multiple")
     } else {
         data
     }

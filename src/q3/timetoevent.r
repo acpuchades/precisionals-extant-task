@@ -13,6 +13,20 @@ q3_output_data_path <- "output/q3/timetoevent.rds"
 source("src/q3/common.r")
 
 q3_as_causal_gene <- function(x) {
+    factor(x, levels = c(
+        "Unknown", "C9orf72", "SOD1", "FUS", "TARDBP", "Multiple"
+    ))
+}
+
+q3_as_clinical_phenotype <- function(x) {
+    factor(x, levels = c(
+        "ALS", "ALS/FTD", "FTD",
+        "PLS", "PMA", "PBP",
+        "UMN-Predominant", "LMN-Predominant",
+        "Flail-Arm", "Flail-Leg"
+    ))
+}
+
 q3_as_site_of_onset <- function(x) {
     factor(x, levels = c(
         "Spinal", "Bulbar", "Generalized", "Respiratory", "Cognitive", "Multiple"
@@ -437,7 +451,7 @@ if (file.exists(q3_output_data_path)) {
             ),
         ) %>%
         transmute(
-            id, site, sex, clinical_phenotype, delta_fs, progression_category,
+            id, site, sex, delta_fs, progression_category,
             age_at_onset = calculated_age_at_onset,
             age_category = cut(calculated_age_at_onset,
                 right = FALSE, ordered_result = TRUE,
@@ -464,7 +478,7 @@ if (file.exists(q3_output_data_path)) {
                 respiratory_onset ~ "Respiratory",
                 cognitive_onset ~ "Cognitive"
             )),
-            ))
+            clinical_phenotype = q3_as_clinical_phenotype(clinical_phenotype)
         )
 
     q3_data <- q3_base %>%
