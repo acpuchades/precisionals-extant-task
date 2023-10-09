@@ -461,6 +461,10 @@ if (file.exists(q3_output_data_path)) {
                     "50-59", "60-69", "70-79", "80+"
                 )
             ),
+            diagnostic_delay = coalesce(
+                (age_at_diagnosis - age_at_onset) * 12,
+                as.duration(date_of_diagnosis - date_of_onset) / dmonths(1)
+            ),
             c9orf72_status, sod1_status, fus_status, tardbp_status,
             causal_gene = q3_as_causal_gene(case_when(
                 altered_genes > 1 ~ "Multiple",
