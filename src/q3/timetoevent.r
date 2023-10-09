@@ -13,7 +13,10 @@ q3_output_data_path <- "output/q3/timetoevent.rds"
 source("src/q3/common.r")
 
 q3_as_causal_gene <- function(x) {
-    factor(x) %>% fct_relevel("Unknown")
+q3_as_site_of_onset <- function(x) {
+    factor(x, levels = c(
+        "Spinal", "Bulbar", "Generalized", "Respiratory", "Cognitive", "Multiple"
+    ))
 }
 
 if (file.exists(q3_output_data_path)) {
@@ -453,14 +456,14 @@ if (file.exists(q3_output_data_path)) {
                 tardbp_status == "Positive" ~ "TARDBP",
                 TRUE ~ "Unknown"
             )),
-            site_of_onset = factor(case_when(
-                is.na(site_of_onset) ~ "Unknown",
+            site_of_onset = q3_as_site_of_onset(case_when(
+                bulbar_onset & spinal_onset ~ "Generalized",
                 onset_sites > 1 ~ "Multiple",
-                bulbar_onset ~ "Bulbar",
-                cognitive_onset ~ "Cognitive",
-                respiratory_onset ~ "Respiratory",
                 spinal_onset ~ "Spinal",
-                TRUE ~ "Other"
+                bulbar_onset ~ "Bulbar",
+                respiratory_onset ~ "Respiratory",
+                cognitive_onset ~ "Cognitive"
+            )),
             ))
         )
 
@@ -468,7 +471,6 @@ if (file.exists(q3_output_data_path)) {
         left_join(q3_time_to_events, by = "id") %>%
         filter(
             q3_is_valid_event_from_origin(event, origin),
-            site_of_onset != "Cognitive",
             duration >= as.duration(0)
         ) %>%
         arrange(origin, event)
