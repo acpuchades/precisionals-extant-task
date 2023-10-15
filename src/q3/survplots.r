@@ -62,7 +62,8 @@ q3_group_labels <- list(
     tardbp_status = "TARDBP status",
     fus_status = "FUS status",
     causal_gene = "causal gene",
-    site_of_onset = "site of onset"
+    site_of_onset = "site of onset",
+    riluzole_use = "riluzole use"
 )
 
 q3_plots <- list(
@@ -139,7 +140,6 @@ q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "yea
         ), data)
 
         km_plot <- ggsurvfit(km_fit) +
-            add_pvalue("annotation") +
             add_legend_title(q3_str_to_sentence(group_lbl))
     }
 
