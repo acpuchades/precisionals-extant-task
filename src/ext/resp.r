@@ -16,7 +16,7 @@ ext_resp <- ext_load_data(
 ) %>%
     mutate(
         fvc_lying_l = fvc_lying_abs / 1000,
-        fvc_sitting_l = coalesce(fvc_sitting_l, fvc_sitting_abs / 1000),
+        fvc_sitting_l = coalesce(fvc_sitting_l, fvc_sitting_abs / 1000)
     ) %>%
     select(-fvc_lying_abs, -fvc_sitting_abs) %>%
     rename_with(~ str_replace(.x, "^age_of_", "age_at_")) %>%
@@ -35,7 +35,13 @@ ext_resp <- ext_load_data(
         snip = "sniff_nasal_inspiratory_pressure_snip",
     ) %>%
     mutate(
+        across(c(fvc_abs, fvc_sitting_abs, svc_abs), ~ {
+            if_else(.x %>% between(0, 10), .x, NA)
+        }),
+        across(ends_with("_rel"), ~ if_else(.x < 1000, .x, NA)),
         fvc_abs = coalesce(fvc_abs, fvc_sitting_abs),
         fvc_rel = coalesce(fvc_rel, fvc_sitting_rel),
-        snip = coalesce(snip, snip_occluded, snip_unoccluded),
+        vc_abs = coalesce(fvc_abs, svc_abs),
+        vc_rel = coalesce(fvc_rel, svc_rel),
+        snip = coalesce(snip, snip_occluded, snip_unoccluded)
     )
