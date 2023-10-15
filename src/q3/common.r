@@ -36,8 +36,17 @@ q3_is_valid_event_from_origin <- function(event, origin) {
 }
 
 q3_select_event <- function(data, origin, event, epoch = dmonths(1)) {
-    data %>% filter(
-        .data$origin == .env$origin,
-        .data$event == .env$event
-    )
+    data %>%
+        filter(
+            .data$origin == .env$origin,
+            .data$event == .env$event
+        ) %>%
+        select(-origin, -event, -time_to_event, -time_to_loss)
+}
+
+q3_show_progress <- function(m, f) {
+    message(m, "…", appendLF = FALSE)
+    result <- f
+    message("\r", m, "… done.")
+    invisible(result)
 }
