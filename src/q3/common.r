@@ -2,6 +2,10 @@ library(dplyr)
 library(forcats)
 library(stringr)
 
+q3_time_of <- function(e) {
+    all_of(c(str_glue("date_of_{e}"), str_glue("age_at_{e}")))
+}
+
 q3_str_restore_allcaps <- function(s) {
     s %>%
         str_replace_all("Fus", "FUS") %>%
@@ -49,4 +53,10 @@ q3_show_progress <- function(m, f) {
     result <- f
     message("\r", m, "… done.")
     invisible(result)
+}
+
+q3_save_plot <- function(plt, path) {
+    png(path)
+    plot(plt)
+    dev.off()
 }

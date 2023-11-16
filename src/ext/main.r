@@ -75,7 +75,7 @@ ext_main <- ext_load_data(
     rename_with(~ str_replace(.x, "non_invasive_venti(la|al)tion$", "niv")) %>%
     rename_with(~ str_replace(.x, "rilzole", "riluzole")) %>%
     rename_with(~ str_replace(.x, "_if_alive$", "")) %>%
-    rename(age_at_23h_niv = "age_at_gt_23h_niv") %>%
+    rename_with(~ str_replace(.x, "_gt_23h_niv", "_23h_niv")) %>%
     rows_update(tibble(id = "FRA-0560", date_of_niv = dmy("15/10/2016")), by = "id") %>%
     mutate(
         across(ends_with("_tested"), ext_parse_boolean),

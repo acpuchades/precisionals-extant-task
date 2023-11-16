@@ -230,6 +230,7 @@ ext_baseline <- ext_main %>%
 
 ext_alsfrs %<>% ext_alsfrs_calculate_assessment_times(ext_baseline)
 ext_alsfrs_premorbid <- filter(ext_alsfrs, time_from_baseline < ddays(0))
+ext_alsfrs_followups <- filter(ext_alsfrs, time_from_baseline >= ddays(0))
 
 ext_baseline_deltafs_p25 <- quantile(ext_baseline$delta_fs, .25, na.rm = TRUE)
 ext_baseline_deltafs_p75 <- quantile(ext_baseline$delta_fs, .75, na.rm = TRUE)
