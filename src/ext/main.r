@@ -130,6 +130,18 @@ ext_main <- ext_load_data(
             age_at_last_follow_up,
             calculated_age_from_date_of_last_follow_up
         ),
+        year_of_diagnosis = coalesce(
+            year(date_of_diagnosis),
+            as.integer(str_extract(year_year_and_month_of_birth, "(\\d{4})-\\d{2}")),
+            year(date_of_birth + dyears(age_at_diagnosis))
+        ),
+        diagnosis_period = factor(if_else(!is.na(year_of_diagnosis),
+            {
+                period_start <- year_of_diagnosis - year_of_diagnosis %% 10
+                str_glue("{period_start}-{period_start+9}")
+            },
+            NA_character_
+        ), ordered = TRUE),
         bulbar_onset = diagnosis == "PBP" | site_of_onset %in% c(
             "Bulbar", "Bulbaire", "Bulbar and Spinal",
             "Bulbar and Spinal",

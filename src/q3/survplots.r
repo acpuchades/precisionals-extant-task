@@ -55,6 +55,7 @@ q3_group_labels <- list(
     site = "site",
     sex = "sex",
     age_category = "age at onset",
+    diagnosis_period = "diagnosis period",
     clinical_phenotype = "clinical phenotype",
     progression_category = "progression category",
     c9orf72_status = "C9orf72 status",

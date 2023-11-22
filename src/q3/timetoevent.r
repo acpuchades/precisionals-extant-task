@@ -508,6 +508,7 @@ if (file.exists(q3_output_data_path)) {
                     "50-59", "60-69", "70-79", "80+"
                 )
             ),
+            diagnosis_period,
             diagnostic_delay = coalesce(
                 (age_at_diagnosis - age_at_onset) * 12,
                 as.duration(date_of_diagnosis - date_of_onset) / dmonths(1)
