@@ -12,6 +12,7 @@ event_data <- ext_main %>%
     select(
         id, site,
         date_of_birth,
+        diagnosis_period,
         vital_status,
         niv,
         gt_23h_niv,
@@ -50,13 +51,13 @@ event_data <- ext_main %>%
         "time_from_onset_to"
     )) %>%
     select(
-        id, site, niv, gt_23h_niv, tracheostomy, gastrostomy,
+        id, site, diagnosis_period, niv, gt_23h_niv, tracheostomy, gastrostomy,
         str_c("time_from_onset_to_", event_names)
     ) %T>%
     write_xlsx("output/q3/time-from-onset.xlsx")
 
 event_times_from_baseline <- ext_main %>%
-    select(id, date_of_birth, q3_time_of(event_names)) %>%
+    select(id, date_of_birth, diagnosis_period, q3_time_of(event_names)) %>%
     inner_join(ext_baseline %>% select(id, date_of_baseline, age_at_baseline), by = "id") %>%
     mutate(
         across(
@@ -140,52 +141,40 @@ event_status_at_vc_assessments <- event_times_from_baseline %>%
         tracheostomy = tracheostomy | (time_from_baseline >= time_from_baseline_to_tracheostomy)
     )
 
-vc_ge_70_events <- event_status_at_vc_assessments %>%
-    filter(vc_rel >= 70) %>%
-    summarize(
+q3_summarize_respiratory_status <- function(data, ...) {
+    data %>% summarize(
         niv = any(niv, na.rm = TRUE),
         gt_23h_niv = any(gt_23h_niv, na.rm = TRUE),
         tracheostomy = any(tracheostomy, na.rm = TRUE),
-        .by = c(id, site)
+        ...
     )
+}
+
+vc_ge_70_events <- event_status_at_vc_assessments %>%
+    filter(vc_rel >= 70) %>%
+    q3_summarize_respiratory_status(.by = c(id, site))
 
 vc_ge_60_events <- event_status_at_vc_assessments %>%
     filter(vc_rel >= 60) %>%
-    summarize(
-        niv = any(niv, na.rm = TRUE),
-        gt_23h_niv = any(gt_23h_niv, na.rm = TRUE),
-        tracheostomy = any(tracheostomy, na.rm = TRUE),
-        .by = c(id, site)
-    )
+    q3_summarize_respiratory_status(.by = c(id, site))
 
 vc_ge_50_events <- event_status_at_vc_assessments %>%
     filter(vc_rel >= 50) %>%
-    summarize(
-        niv = any(niv, na.rm = TRUE),
-        gt_23h_niv = any(gt_23h_niv, na.rm = TRUE),
-        tracheostomy = any(tracheostomy, na.rm = TRUE),
-        .by = c(id, site)
-    )
+    q3_summarize_respiratory_status(.by = c(id, site))
 
 vc_lt_50_events <- event_status_at_vc_assessments %>%
     filter(vc_rel < 50) %>%
-    summarize(
-        niv = any(niv, na.rm = TRUE),
-        gt_23h_niv = any(gt_23h_niv, na.rm = TRUE),
-        tracheostomy = any(tracheostomy, na.rm = TRUE),
-        .by = c(id, site)
-    )
-
+    q3_summarize_respiratory_status(.by = c(id, site))
 
 q3_summary_table <- function(...) {
     t <- table(..., useNA = "ifany")
     colnames(t) %<>% replace_na("NA")
-    pt <- prop.table(t, margin = 1) * 100
+    pt <- round(prop.table(t, margin = 1) * 100, 2)
     colnames(pt) <- str_c("%", colnames(pt))
     cbind(t, pt)
 }
 
-sink("output/q3/event-times-at-vc.txt")
+sink("output/q3/event-status-at-vc.txt")
 
 cat("# NIV PER SITE\n\n")
 q3_summary_table(event_data$site, event_data$niv) %>% print()
@@ -200,42 +189,55 @@ cat("# GASTROSTOMY PER SITE\n\n")
 q3_summary_table(event_data$site, event_data$gastrostomy) %>% print()
 cat("\n\n")
 
-cat("# NIV PER SITE at FVC ≥70%\n\n")
+cat("# NIV PER DIAGNOSIS PERIOD\n\n")
+q3_summary_table(event_data$diagnosis_period, event_data$niv) %>% print()
+cat("\n\n")
+cat("# NIV >23h PER DIAGNOSIS PERIOD\n\n")
+q3_summary_table(event_data$diagnosis_period, event_data$gt_23h_niv) %>% print()
+cat("\n\n")
+cat("# TRACHEOSTOMY PER DIAGNOSIS PERIOD\n\n")
+q3_summary_table(event_data$diagnosis_period, event_data$tracheostomy) %>% print()
+cat("\n\n")
+cat("# GASTROSTOMY PER DIAGNOSIS PERIOD\n\n")
+q3_summary_table(event_data$diagnosis_period, event_data$gastrostomy) %>% print()
+cat("\n\n")
+
+cat("# NIV STATUS PER SITE at FVC ≥70%\n\n")
 q3_summary_table(vc_ge_70_events$site, vc_ge_70_events$niv) %>% print()
 cat("\n\n")
-cat("# NIV PER SITE at FVC ≥60%\n\n")
+cat("# NIV STATUTS PER SITE at FVC ≥60%\n\n")
 q3_summary_table(vc_ge_60_events$site, vc_ge_60_events$niv) %>% print()
 cat("\n\n")
-cat("# NIV PER SITE at FVC ≥50%\n\n")
+cat("# NIV STATUS PER SITE at FVC ≥50%\n\n")
 q3_summary_table(vc_ge_50_events$site, vc_ge_50_events$niv) %>% print()
 cat("\n\n")
-cat("# NIV PER SITE at FVC <50%\n\n")
+cat("# NIV STATUS PER SITE at FVC <50%\n\n")
 q3_summary_table(vc_lt_50_events$site, vc_lt_50_events$niv) %>% print()
 cat("\n\n")
 
-cat("# NIV >23h PER SITE at FVC ≥70%\n\n")
+cat("# NIV >23h STATUS PER SITE at FVC ≥70%\n\n")
 q3_summary_table(vc_ge_70_events$site, vc_ge_70_events$gt_23h_niv) %>% print()
 cat("\n\n")
-cat("# NIV >23h PER SITE at FVC ≥60%\n\n")
+cat("# NIV >23h STATUS PER SITE at FVC ≥60%\n\n")
 q3_summary_table(vc_ge_60_events$site, vc_ge_60_events$gt_23h_niv) %>% print()
 cat("\n\n")
-cat("# NIV >23h PER SITE at FVC ≥50%\n\n")
+cat("# NIV >23h STATUS PER SITE at FVC ≥50%\n\n")
 q3_summary_table(vc_ge_50_events$site, vc_ge_50_events$gt_23h_niv) %>% print()
 cat("\n\n")
-cat("# NIV >23h PER SITE at FVC <50%\n\n")
+cat("# NIV >23h STATUS PER SITE at FVC <50%\n\n")
 q3_summary_table(vc_lt_50_events$site, vc_lt_50_events$gt_23h_niv) %>% print()
 cat("\n\n")
 
-cat("# TRACHEOSTOMY PER SITE at FVC ≥70%\n\n")
+cat("# TRACHEOSTOMY STATUS PER SITE at FVC ≥70%\n\n")
 q3_summary_table(vc_ge_70_events$site, vc_ge_70_events$tracheostomy) %>% print()
 cat("\n\n")
-cat("# TRACHEOSTOMY PER SITE at FVC ≥60%\n\n")
+cat("# TRACHEOSTOMY STATUS PER SITE at FVC ≥60%\n\n")
 q3_summary_table(vc_ge_60_events$site, vc_ge_60_events$tracheostomy) %>% print()
 cat("\n\n")
-cat("# TRACHEOSTOMY PER SITE at FVC ≥50%\n\n")
+cat("# TRACHEOSTOMY STATUS PER SITE at FVC ≥50%\n\n")
 q3_summary_table(vc_ge_50_events$site, vc_ge_50_events$tracheostomy) %>% print()
 cat("\n\n")
-cat("# TRACHEOSTOMY PER SITE at FVC <50%\n\n")
+cat("# TRACHEOSTOMY STATUS PER SITE at FVC <50%\n\n")
 q3_summary_table(vc_lt_50_events$site, vc_lt_50_events$tracheostomy) %>% print()
 cat("\n\n")
 

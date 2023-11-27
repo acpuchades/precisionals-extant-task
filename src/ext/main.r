@@ -138,7 +138,7 @@ ext_main <- ext_load_data(
         diagnosis_period = factor(if_else(!is.na(year_of_diagnosis),
             {
                 period_start <- year_of_diagnosis - year_of_diagnosis %% 10
-                str_glue("{period_start}-{period_start+9}")
+                str_glue("{period_start}-{pmin(period_start+9, 2022, na.rm = TRUE)}")
             },
             NA_character_
         ), ordered = TRUE),
