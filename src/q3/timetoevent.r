@@ -180,28 +180,46 @@ if (file.exists(q3_output_data_path)) {
 
     q3_vc_assessments <- ext_resp %>%
         left_join(
-            ext_main %>% select(id, date_of_onset, age_at_onset),
+            ext_main %>% select(
+                id, date_of_onset, age_at_onset, date_of_diagnosis, age_at_diagnosis
+            ),
             by = "id"
         ) %>%
-        mutate(time_from_onset = coalesce(
-            date_of_assessment - date_of_onset,
-            dyears(age_at_assessment - age_at_onset)
-        ))
+        mutate(
+            time_from_onset = coalesce(
+                date_of_assessment - date_of_onset,
+                dyears(age_at_assessment - age_at_onset)
+            ),
+            time_from_diagnosis = coalesce(
+                date_of_assessment - date_of_diagnosis,
+                dyears(age_at_assessment - age_at_diagnosis)
+            )
+        )
 
     q3_vc_at_baseline <- q3_vc_assessments %>%
-        filter(time_from_onset >= dmonths(0)) %>%
-        filter(!is.na(vc_abs) | !is.na(vc_rel)) %>%
+        filter(
+            time_from_onset >= dmonths(0),
+            !is.na(vc_abs) | !is.na(vc_rel)
+        ) %>%
         slice_min(time_from_onset / dmonths(1), by = id, n = 1, with_ties = FALSE) %>%
         select(id, baseline_vc_abs = "vc_abs", baseline_vc_rel = "vc_rel")
 
     q3_show_progress("Calculating time to vital capacity decline", {
-        q3_time_to_vc_decline <- q3_vc_assessments %>%
+        q3_time_to_vc_lt_80 <- q3_vc_assessments %>%
             filter(fvc_rel < 80 | svc_rel < 80) %>%
             slice_min(time_from_onset, n = 1, with_ties = FALSE, by = "id") %>%
             select(
                 id,
-                date_of_vc_decline = "date_of_assessment",
-                age_at_vc_decline = "age_at_assessment"
+                date_of_vc_lt_80 = "date_of_assessment",
+                age_at_vc_lt_80 = "age_at_assessment"
+            )
+        q3_time_to_vc_lt_50 <- q3_vc_assessments %>%
+            filter(fvc_rel < 50 | svc_rel < 50) %>%
+            slice_min(time_from_onset, n = 1, with_ties = FALSE, by = "id") %>%
+            select(
+                id,
+                date_of_vc_lt_50 = "date_of_assessment",
+                age_at_vc_lt_50 = "age_at_assessment"
             )
     })
 
@@ -268,7 +286,8 @@ if (file.exists(q3_output_data_path)) {
             left_join(q3_time_to_mitos, by = "id") %>%
             left_join(q3_time_to_walking_support, by = "id") %>%
             left_join(q3_time_to_respiratory_onset, by = "id") %>%
-            left_join(q3_time_to_vc_decline, by = "id") %>%
+            left_join(q3_time_to_vc_lt_80, by = "id") %>%
+            left_join(q3_time_to_vc_lt_50, by = "id") %>%
             left_join(q3_time_to_niv_by_alsfrs, by = "id") %>%
             left_join(q3_time_to_niv_23h_by_alsfrs, by = "id") %>%
             left_join(q3_time_to_imv_by_alsfrs, by = "id") %>%
@@ -293,9 +312,13 @@ if (file.exists(q3_output_data_path)) {
                         as.duration(date_of_respiratory_onset - .date_of_origin),
                         dyears(age_at_respiratory_onset - .age_at_origin)
                     ),
-                    vc_decline = ~ coalesce(
-                        as.duration(date_of_vc_decline - .date_of_origin),
-                        dyears(age_at_vc_decline - .age_at_origin)
+                    vc_lt_80 = ~ coalesce(
+                        as.duration(date_of_vc_lt_80 - .date_of_origin),
+                        dyears(age_at_vc_lt_50 - .age_at_origin)
+                    ),
+                    vc_lt_50 = ~ coalesce(
+                        as.duration(date_of_vc_lt_50 - .date_of_origin),
+                        dyears(age_at_vc_lt_50 - .age_at_origin)
                     ),
                     ventilatory_support = ~ pmin(
                         as.duration(date_of_niv - .date_of_origin),
@@ -387,7 +410,11 @@ if (file.exists(q3_output_data_path)) {
                     )
                 ),
                 duration_for = list(
-                    vc_decline = ~ coalesce(
+                    vc_lt_80 = ~ coalesce(
+                        as.duration(date_of_last_vc_assessment - .date_of_origin),
+                        dyears(age_at_last_vc_assessment - .age_at_origin)
+                    ),
+                    vc_lt_50 = ~ coalesce(
                         as.duration(date_of_last_vc_assessment - .date_of_origin),
                         dyears(age_at_last_vc_assessment - .age_at_origin)
                     ),

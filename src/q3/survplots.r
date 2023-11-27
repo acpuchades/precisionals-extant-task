@@ -32,7 +32,8 @@ q3_event_labels <- list(
     diagnosis = "diagnosis",
     walking_support = "walking support",
     respiratory_onset = "respiratory onset",
-    vc_decline = "decline in vital capacity (<80%)",
+    vc_lt_80 = "decline in vital capacity (<80%)",
+    vc_lt_50 = "decline in vital capacity (<50%)",
     ventilatory_support = "ventilatory support",
     niv = "NIV",
     niv_23h = "NIV >23h",
@@ -71,24 +72,24 @@ q3_plots <- list(
     list(
         origins = "birth",
         events = "onset",
-        output_name = "@overall/time-from-{origin}-to-{event}"
+        output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "birth",
         events = "onset",
         groups = names(q3_group_labels),
-        output_name = "{group}/time-from-{origin}-to-{event}"
+        output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     ),
     list(
-        origins = "onset",
+        origins = c("onset", "diagnosis"),
         events = names(q3_event_labels),
-        output_name = "@overall/time-from-{origin}-to-{event}"
+        output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
     ),
     list(
-        origins = "onset",
+        origins = c("onset", "diagnosis"),
         events = names(q3_event_labels),
         groups = names(q3_group_labels),
-        output_name = "{group}/time-from-{origin}-to-{event}"
+        output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     )
 )
 
