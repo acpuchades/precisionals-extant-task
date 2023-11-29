@@ -116,6 +116,10 @@ q3_trim_survival_groups <- function(data, group) {
         ))
     } else if (group == "site_of_onset") {
         data %>% filter(site_of_onset != "Multiple")
+    } else if (group == "diagnosis_period") {
+        data %>% filter(diagnosis_period %in% c(
+            "1990-1999", "2000-2009", "2010-2019", "2020-2022"
+        ))
     } else {
         data
     }
@@ -142,7 +146,8 @@ q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "yea
         ), data)
 
         km_plot <- ggsurvfit(km_fit) +
-            add_legend_title(q3_str_to_sentence(group_lbl))
+            add_legend_title(q3_str_to_sentence(group_lbl)) +
+            add_pvalue("annotation")
     }
 
     km_plot +
