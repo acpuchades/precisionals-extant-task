@@ -1,244 +1,136 @@
-source("src/ext/main.r")
+library(ggplot2)
+library(stringr)
+library(tibble)
+
 source("src/ext/resp.r")
 source("src/ext/alsfrs.r")
 
-source("src/q3/common.r")
+q3_summary_table <- function(...) {
+    t <- table(...)
+    mt <- margin.table(t, margin = 1)
+    pt <- round(prop.table(t, margin = 1) * 100, 2)
+    colnames(pt) <- str_c(colnames(pt), " (%)")
+    cbind(n = mt, t, pt)
+}
 
-library(writexl)
+patients_vstatus <- ext_main %>%
+    transmute(site, id, is_alive = vital_status == "Alive")
 
-event_names <- c("diagnosis", "niv", "23h_niv", "tracheostomy", "gastrostomy", "death")
-
-event_data <- ext_main %>%
-    select(
-        id, site,
-        date_of_birth,
-        diagnosis_period,
-        vital_status,
-        niv,
-        gt_23h_niv,
-        tracheostomy,
-        gastrostomy,
-        q3_time_of("onset"),
-        q3_time_of(event_names),
-    ) %>%
-    mutate(
-        across(
-            str_c("date_of_", event_names),
-            ~ coalesce(
-                .x - date_of_onset,
-                .x - (date_of_birth + dyears(age_at_onset))
-            ),
-            .names = "__duration_from_date_of_onset_to_{.col}"
-        ),
-        across(
-            str_c("age_at_", event_names), ~ coalesce(
-                dyears(.x - age_at_onset),
-                dyears((date_of_onset - date_of_birth) / dyears(1) - .x)
-            ),
-            .names = "__duration_from_age_at_onset_to_{.col}"
-        ),
-        across(
-            starts_with("__duration_from_date_of_onset_to_date_of_"), ~ {
-                event <- str_replace(cur_column(), "^__duration_from_date_of_onset_to_date_of_", "")
-                coalesce(.x, get(str_c("__duration_from_age_at_onset_to_age_at_", event)))
-            },
-            .names = "time_from_onset_to{.col}"
-        )
-    ) %>%
-    rename_with(~ str_replace(
-        .x,
-        "time_from_onset_to__duration_from_date_of_onset_to_date_of",
-        "time_from_onset_to"
+niv_status_as_reported <- ext_main %>%
+    select(site, id, date_of_assessment = "date_of_niv", age_at_assessment = "age_at_niv") %>%
+    mutate(niv_carrier = !is.na(date_of_assessment) | !is.na(age_at_assessment)) %>%
+    left_join(ext_baseline %>% select(id, date_of_baseline, age_at_baseline), by = "id") %>%
+    mutate(.after = id, time_from_baseline = coalesce(
+        date_of_assessment - date_of_baseline,
+        dyears(age_at_assessment - age_at_baseline),
+        ddays(0)
     )) %>%
-    select(
-        id, site, diagnosis_period, niv, gt_23h_niv, tracheostomy, gastrostomy,
-        str_c("time_from_onset_to_", event_names)
-    ) %T>%
-    write_xlsx("output/q3/time-from-onset.xlsx")
+    select(-date_of_baseline, -age_at_baseline)
 
-event_times_from_baseline <- ext_main %>%
-    select(id, date_of_birth, diagnosis_period, q3_time_of(event_names)) %>%
-    inner_join(ext_baseline %>% select(id, date_of_baseline, age_at_baseline), by = "id") %>%
-    mutate(
-        across(
-            str_c("age_at_", event_names),
-            ~ coalesce(
-                dyears(.x - age_at_baseline),
-                dyears(.x - (date_of_baseline - date_of_birth) / dyears(1))
-            ),
-            .names = "time_from_baseline__{.col}"
-        ),
-        across(
-            str_c("date_of_", event_names),
-            ~ coalesce(
-                as.duration(.x - date_of_baseline),
-                as.duration(.x - date_of_birth + dyears(age_at_baseline))
-            ),
-            .names = "time_from_baseline__{.col}"
-        ),
-        across(
-            str_c("time_from_baseline__date_of_", event_names),
-            ~ {
-                event <- str_replace(cur_column(), "^time_from_baseline__date_of_", "")
-                coalesce(.x, get(str_c("time_from_baseline__age_at_", event)))
-            }
-        )
-    ) %>%
-    select(-starts_with("time_from_baseline__age_at")) %>%
-    rename_with(~ str_replace(.x, "^time_from_baseline__date_of_", "time_from_baseline_to_"))
+niv_status_by_alsfrs <- ext_alsfrs_followups %>%
+    select(site, id, time_from_baseline, date_of_assessment, age_at_assessment, q12_respiratory_insufficiency) %>%
+    mutate(niv_carrier = q12_respiratory_insufficiency %>% between(1, 3), .keep = "unused") %>%
+    arrange(id, time_from_baseline)
 
-event_status_by_alsfrs <- ext_alsfrs_followups %>%
-    transmute(
-        id, site, time_from_baseline,
-        niv = q12_respiratory_insufficiency %>% between(1, 3),
-        gt_23h_niv = q12_respiratory_insufficiency == 1,
-        tracheostomy = q12_respiratory_insufficiency == 0
-    )
-
-fvc_followups <- ext_baseline %>%
-    select(id, date_of_baseline, age_at_baseline, months_from_onset) %>%
-    left_join(ext_main %>% select(id, site, date_of_birth), by = "id") %>%
-    inner_join(
-        ext_resp %>% select(id, date_of_assessment, age_at_assessment, vc_abs, vc_rel),
+vc_assessments_from_baseline <- ext_resp %>%
+    select(site, id, date_of_assessment, age_at_assessment, vc_rel) %>%
+    left_join(
+        ext_baseline %>% select(id, date_of_baseline, age_at_baseline),
         by = "id"
     ) %>%
     mutate(
-        date_of_assessment = coalesce(
-            date_of_assessment,
-            date_of_birth + dyears(age_at_assessment)
-        ),
-        date_of_baseline = coalesce(
-            date_of_baseline,
-            date_of_birth + dyears(age_at_baseline)
-        ),
-        time_from_baseline = coalesce(
+        .after = id, time_from_baseline = coalesce(
             date_of_assessment - date_of_baseline,
-            dmonths((age_at_assessment - age_at_baseline) * 12)
+            dyears(age_at_assessment - age_at_baseline)
         )
     ) %>%
-    select(
-        id, site, time_from_baseline, vc_abs, vc_rel
-    )
+    filter(time_from_baseline >= ddays(0)) %>%
+    select(-date_of_baseline, -age_at_baseline) %>%
+    drop_na(vc_rel)
 
-event_status_at_vc_assessments <- event_times_from_baseline %>%
-    left_join(event_status_by_alsfrs, by = "id") %>%
-    bind_rows(fvc_followups) %>%
-    group_by(id, site) %>%
+vc_and_niv_status_from_baseline <- niv_status_as_reported %>%
+    bind_rows(niv_status_by_alsfrs) %>%
+    semi_join(vc_assessments_from_baseline, by = "id") %>%
+    bind_rows(vc_assessments_from_baseline) %>%
+    group_by(id) %>%
     arrange(time_from_baseline, .by_group = TRUE) %>%
-    fill(niv, gt_23h_niv, tracheostomy, vc_abs, vc_rel) %>%
-    ungroup() %>%
-    mutate(
-        niv = niv | (
-            time_from_baseline >= time_from_baseline_to_niv &
-                (is.na(time_from_baseline_to_tracheostomy) |
-                    time_from_baseline < time_from_baseline_to_tracheostomy)
-        ),
-        gt_23h_niv = gt_23h_niv | (
-            time_from_baseline >= time_from_baseline_to_23h_niv &
-                (is.na(time_from_baseline_to_tracheostomy) |
-                    time_from_baseline < time_from_baseline_to_tracheostomy)
-        ),
-        tracheostomy = tracheostomy | (time_from_baseline >= time_from_baseline_to_tracheostomy)
-    )
+    fill(niv_carrier, vc_rel) %>%
+    ungroup()
 
-q3_summarize_respiratory_status <- function(data, ...) {
-    data %>% summarize(
-        niv = any(niv, na.rm = TRUE),
-        gt_23h_niv = any(gt_23h_niv, na.rm = TRUE),
-        tracheostomy = any(tracheostomy, na.rm = TRUE),
-        ...
-    )
-}
+vc_at_niv_start <- vc_and_niv_status_from_baseline %>%
+    filter(niv_carrier == TRUE) %>%
+    slice_min(time_from_baseline, by = id, n = 1, with_ties = FALSE) %>%
+    select(site, id, vc_at_niv = "vc_rel")
 
-vc_ge_70_events <- event_status_at_vc_assessments %>%
-    filter(vc_rel >= 70) %>%
-    q3_summarize_respiratory_status(.by = c(id, site))
+vc_niv_summary <- patients_vstatus %>%
+    inner_join(
+        vc_and_niv_status_from_baseline %>% select(id, vc_rel),
+        by = "id"
+    ) %>%
+    summarize(
+        vc_min = min(vc_rel, na.rm = TRUE),
+        vc_max = max(vc_rel, na.rm = TRUE),
+        .by = c("site", "id")
+    ) %>%
+    left_join(vc_at_niv_start %>% select(id, vc_at_niv), by = "id") %>%
+    mutate(vc_at_niv_interval = factor(case_when(
+        vc_at_niv < 50 ~ "<50",
+        vc_at_niv %>% between(50, 60) ~ "51-60",
+        vc_at_niv %>% between(60, 70) ~ "61-70",
+        vc_at_niv > 70 ~ ">70"
+    ), ordered = TRUE, levels = c("<50", "51-60", "61-70", ">70")))
 
-vc_ge_60_events <- event_status_at_vc_assessments %>%
-    filter(vc_rel >= 60) %>%
-    q3_summarize_respiratory_status(.by = c(id, site))
-
-vc_ge_50_events <- event_status_at_vc_assessments %>%
-    filter(vc_rel >= 50) %>%
-    q3_summarize_respiratory_status(.by = c(id, site))
-
-vc_lt_50_events <- event_status_at_vc_assessments %>%
-    filter(vc_rel < 50) %>%
-    q3_summarize_respiratory_status(.by = c(id, site))
-
-q3_summary_table <- function(...) {
-    t <- table(..., useNA = "ifany")
-    colnames(t) %<>% replace_na("NA")
-    pt <- round(prop.table(t, margin = 1) * 100, 2)
-    colnames(pt) <- str_c("%", colnames(pt))
-    cbind(t, pt)
-}
-
-sink("output/q3/event-status-at-vc.txt")
-
-cat("# NIV PER SITE\n\n")
-q3_summary_table(event_data$site, event_data$niv) %>% print()
+sink("output/q3/niv/niv-per-site.table.txt")
+cat("# NIV STATUS PER SITE AS REPORTED (N/A removed)\n\n")
+ext_main %$%
+    q3_summary_table(site, niv) %>%
+    print()
 cat("\n\n")
-cat("# NIV >23h PER SITE\n\n")
-q3_summary_table(event_data$site, event_data$gt_23h_niv) %>% print()
-cat("\n\n")
-cat("# TRACHEOSTOMY PER SITE\n\n")
-q3_summary_table(event_data$site, event_data$tracheostomy) %>% print()
-cat("\n\n")
-cat("# GASTROSTOMY PER SITE\n\n")
-q3_summary_table(event_data$site, event_data$gastrostomy) %>% print()
-cat("\n\n")
-
-cat("# NIV PER DIAGNOSIS PERIOD\n\n")
-q3_summary_table(event_data$diagnosis_period, event_data$niv) %>% print()
-cat("\n\n")
-cat("# NIV >23h PER DIAGNOSIS PERIOD\n\n")
-q3_summary_table(event_data$diagnosis_period, event_data$gt_23h_niv) %>% print()
-cat("\n\n")
-cat("# TRACHEOSTOMY PER DIAGNOSIS PERIOD\n\n")
-q3_summary_table(event_data$diagnosis_period, event_data$tracheostomy) %>% print()
-cat("\n\n")
-cat("# GASTROSTOMY PER DIAGNOSIS PERIOD\n\n")
-q3_summary_table(event_data$diagnosis_period, event_data$gastrostomy) %>% print()
-cat("\n\n")
-
-cat("# NIV STATUS PER SITE at FVC ≥70%\n\n")
-q3_summary_table(vc_ge_70_events$site, vc_ge_70_events$niv) %>% print()
-cat("\n\n")
-cat("# NIV STATUTS PER SITE at FVC ≥60%\n\n")
-q3_summary_table(vc_ge_60_events$site, vc_ge_60_events$niv) %>% print()
-cat("\n\n")
-cat("# NIV STATUS PER SITE at FVC ≥50%\n\n")
-q3_summary_table(vc_ge_50_events$site, vc_ge_50_events$niv) %>% print()
-cat("\n\n")
-cat("# NIV STATUS PER SITE at FVC <50%\n\n")
-q3_summary_table(vc_lt_50_events$site, vc_lt_50_events$niv) %>% print()
-cat("\n\n")
-
-cat("# NIV >23h STATUS PER SITE at FVC ≥70%\n\n")
-q3_summary_table(vc_ge_70_events$site, vc_ge_70_events$gt_23h_niv) %>% print()
-cat("\n\n")
-cat("# NIV >23h STATUS PER SITE at FVC ≥60%\n\n")
-q3_summary_table(vc_ge_60_events$site, vc_ge_60_events$gt_23h_niv) %>% print()
-cat("\n\n")
-cat("# NIV >23h STATUS PER SITE at FVC ≥50%\n\n")
-q3_summary_table(vc_ge_50_events$site, vc_ge_50_events$gt_23h_niv) %>% print()
-cat("\n\n")
-cat("# NIV >23h STATUS PER SITE at FVC <50%\n\n")
-q3_summary_table(vc_lt_50_events$site, vc_lt_50_events$gt_23h_niv) %>% print()
-cat("\n\n")
-
-cat("# TRACHEOSTOMY STATUS PER SITE at FVC ≥70%\n\n")
-q3_summary_table(vc_ge_70_events$site, vc_ge_70_events$tracheostomy) %>% print()
-cat("\n\n")
-cat("# TRACHEOSTOMY STATUS PER SITE at FVC ≥60%\n\n")
-q3_summary_table(vc_ge_60_events$site, vc_ge_60_events$tracheostomy) %>% print()
-cat("\n\n")
-cat("# TRACHEOSTOMY STATUS PER SITE at FVC ≥50%\n\n")
-q3_summary_table(vc_ge_50_events$site, vc_ge_50_events$tracheostomy) %>% print()
-cat("\n\n")
-cat("# TRACHEOSTOMY STATUS PER SITE at FVC <50%\n\n")
-q3_summary_table(vc_lt_50_events$site, vc_lt_50_events$tracheostomy) %>% print()
-cat("\n\n")
-
+cat("# NIV STATUS PER SITE AS REPORTED (N/A included)\n\n")
+ext_main %$%
+    q3_summary_table(site, niv, useNA = "ifany") %>%
+    print()
 sink()
+
+sink("output/q3/niv/niv-per-period.table.txt")
+cat("# NIV STATUS PER PERIOD AS REPORTED (N/A removed)\n\n")
+ext_main %$%
+    q3_summary_table(diagnosis_period, niv) %>%
+    print()
+cat("\n\n")
+cat("# NIV STATUS PER PERIOD AS REPORTED (N/A included)\n\n")
+ext_main %$%
+    q3_summary_table(diagnosis_period, niv, useNA = "ifany") %>%
+    print()
+sink()
+
+sink("output/q3/niv/vc-at-niv.table.txt")
+vc_niv_summary %$%
+    q3_summary_table(site, vc_at_niv_interval) %>%
+    print()
+sink()
+
+ggplot(vc_niv_summary, aes(sample = vc_at_niv)) +
+    geom_qq_line() +
+    geom_qq() +
+    facet_wrap(~site) +
+    theme_bw()
+ggsave("output/q3/niv/vc-at-niv.qqplot.png")
+
+sink("output/q3/niv/vc-at-niv.aov.txt")
+aov(vc_at_niv ~ site, vc_niv_summary) %>%
+    summary() %>%
+    print()
+sink()
+
+ggplot(vc_niv_summary, aes(vc_at_niv, fill = site)) +
+    geom_density(alpha = 0.3) +
+    labs(x = "Vital capacity (%)", y = "Density", fill = "Site") +
+    theme_bw()
+ggsave("output/q3/niv/vc-at-niv-per-site.density.png")
+
+ggplot(vc_niv_summary, aes(x = site, y = vc_at_niv, fill = site)) +
+    geom_boxplot() +
+    labs(title = "VC at NIV", x = "Site", y = "VC (%)") +
+    theme_bw()
+ggsave("output/q3/niv/vc-at-niv-per-site.boxplot.png")
