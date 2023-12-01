@@ -217,6 +217,7 @@ ext_baseline <- ext_main %>%
         )
     ) %>%
     filter(months_from_onset > 0) %>%
+    drop_na(total_score) %>%
     slice_min(months_from_onset, by = "id", n = 1, with_ties = FALSE) %>%
     transmute(
         id, months_from_onset, total_score,
