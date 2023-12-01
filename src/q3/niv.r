@@ -1,3 +1,4 @@
+library(forcats)
 library(ggplot2)
 library(stringr)
 library(tibble)
@@ -126,11 +127,13 @@ sink()
 ggplot(vc_niv_summary, aes(vc_at_niv, fill = site)) +
     geom_density(alpha = 0.3) +
     labs(x = "Vital capacity (%)", y = "Density", fill = "Site") +
-    theme_bw()
+    theme_bw() +
+    theme(legend.position = "none")
 ggsave("output/q3/niv/vc-at-niv-per-site.density.png")
 
 ggplot(vc_niv_summary, aes(x = site, y = vc_at_niv, fill = site)) +
     geom_boxplot() +
     labs(title = "VC at NIV", x = "Site", y = "VC (%)") +
-    theme_bw()
+    theme_bw() +
+    theme(legend.position = "none")
 ggsave("output/q3/niv/vc-at-niv-per-site.boxplot.png")
