@@ -4,6 +4,7 @@ suppressPackageStartupMessages({
 
 source("src/ext/common.r")
 
+# Load source datasets and rename fields
 ext_main <- ext_load_data(
     "P-ALS_Ext_V2_Main_Data_File.xlsx",
     col_types = c(
@@ -76,7 +77,33 @@ ext_main <- ext_load_data(
     rename_with(~ str_replace(.x, "rilzole", "riluzole")) %>%
     rename_with(~ str_replace(.x, "_if_alive$", "")) %>%
     rename_with(~ str_replace(.x, "_gt_23h_niv", "_23h_niv")) %>%
-    rows_update(tibble(id = "FRA-0560", date_of_niv = dmy("15/10/2016")), by = "id") %>%
+    rows_update(tibble(id = "FRA-0560", date_of_niv = dmy("15/10/2016")), by = "id")
+
+# Apply Leuven corrections
+ext_leuven_corrections_path <- "PALS_Leuven_Corrected_Age_Death_or_Transfer_2024-01-18_cleaning.xlsx"
+if (file.exists(file.path("data", ext_leuven_corrections_path))) {
+    ext_leuven_corrections <- ext_load_data(ext_leuven_corrections_path) %>%
+        rename(
+            id = "pals_id",
+            corrected_age_at_transfer = "precision_age_at_death_transfer_if_still_alive",
+        ) %>%
+        inner_join(
+            ext_main %>% select(id, vital_status, age_at_transfer, age_at_death),
+            by = "id"
+        ) %>%
+        mutate(
+            corrected_vital_status = if_else(
+                !is.na(corrected_age_at_death) & vital_status != "Deceased",
+                "Deceased", NA_character_
+            )
+        ) %>%
+        select(id, starts_with("corrected_"))
+
+    ext_main <- ext_main %>% ext_apply_corrections(ext_leuven_corrections)
+}
+
+# Make data fields uniform and add calculated fields
+ext_main <- ext_main %>%
     mutate(
         across(ends_with("_tested"), ext_parse_boolean),
         across(c(gastrostomy, niv, tracheostomy), ext_parse_boolean),

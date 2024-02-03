@@ -37,3 +37,18 @@ ext_parse_boolean <- function(x) {
         c("No", "no") ~ FALSE
     )
 }
+
+ext_apply_corrections <- function(main, corrected) {
+    corrected_cols <- corrected %>%
+        select(starts_with("corrected_")) %>%
+        colnames() %>%
+        str_replace("corrected_", "")
+
+    main %>%
+        left_join(corrected, by = "id") %>%
+        mutate(across(all_of(corrected_cols), ~ (function(col, prev) {
+            corrected <- get(str_c("corrected_", col))
+            coalesce(corrected, prev)
+        })(cur_column(), .x))) %>%
+        select(-starts_with("corrected_"))
+}
