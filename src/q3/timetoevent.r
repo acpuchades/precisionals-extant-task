@@ -514,6 +514,7 @@ if (file.exists(q3_output_data_path)) {
             by = "id"
         ) %>%
         mutate(
+            site = factor(site, labels = str_c("Site ", 1:9)),
             onset_sites = bulbar_onset + spinal_onset +
                 cognitive_onset + respiratory_onset,
             altered_genes = (
