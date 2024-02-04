@@ -125,7 +125,7 @@ q3_trim_survival_groups <- function(data, group) {
     }
 }
 
-q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "years") {
+q3_analyze_survival <- function(data, origin, event, group = NULL, unit = "years") {
     origin_lbl <- q3_origin_labels[[origin]]
     event_lbl <- q3_event_labels[[event]]
     title <- q3_str_to_title(event_lbl)
@@ -144,16 +144,28 @@ q3_make_survival_plot <- function(data, origin, event, group = NULL, unit = "yea
         km_fit <- survfit2(as.formula(
             str_glue("Surv(duration, status == 'event') ~ {group}")
         ), data)
-
         km_plot <- ggsurvfit(km_fit) +
             add_legend_title(q3_str_to_sentence(group_lbl)) +
             add_pvalue("annotation")
     }
 
-    km_plot +
+    km_plot <- km_plot +
         scale_ggsurvfit() +
         add_confidence_interval() +
         labs(title = title, x = xlab, y = NULL)
+
+    list("fit" = km_fit, "plot" = km_plot)
+}
+
+q3_output_summary <- function(fit, origin, event, group, path) {
+    sink(path %>% with_ext("txt"))
+    cat(str_glue("# TIME FROM {origin} TO {event}"))
+    if (!is.null(group)) {
+        cat(str_glue(" BY {group}"))
+    }
+    cat("\n\n")
+    print(fit)
+    sink()
 }
 
 q3_save_plot <- function(plot, path, width = q3_survplots_output_width,
@@ -189,9 +201,10 @@ for (p in q3_plots) {
             }
 
             for (group in p$groups %||% list(NULL)) {
-                plot <- q3_make_survival_plot(q3_data, origin, event, group, epoch_unit)
-                output_fname <- str_glue(p$output_name) %>% with_ext(q3_survplots_output_format)
-                q3_save_plot(plot, file.path("output", "q3", output_fname))
+                results <- q3_analyze_survival(q3_data, origin, event, group, epoch_unit)
+                output_path <- file.path("output", "q3", str_glue(p$output_name))
+                q3_save_plot(results$plot, output_path %>% with_ext(q3_survplots_output_format))
+                q3_output_summary(results$fit, origin, event, group, output_path %>% with_ext("txt"))
                 progress_bar$tick()
             }
         }
