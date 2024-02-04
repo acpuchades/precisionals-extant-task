@@ -52,3 +52,28 @@ ext_apply_corrections <- function(main, corrected) {
         })(cur_column(), .x))) %>%
         select(-starts_with("corrected_"))
 }
+
+ext_as_sex <- function(x) {
+    factor(x, levels = c("Male", "Female"))
+}
+
+ext_as_gene_status <- function(x) {
+    factor(x, levels = c("Negative", "Positive"))
+}
+
+ext_as_c9orf72_status <- function(x) {
+    factor(x, levels = c("Negative", "Intermediate", "Positive"))
+}
+
+ext_logical_to_factor <- function(x, when_true = "Yes", when_false = "No") {
+    factor(if_else(x, when_true, when_false), levels = c(when_false, when_true))
+}
+
+ext_as_clinical_phenotype <- function(x) {
+    factor(x, levels = c(
+        "ALS", "ALS/FTD", "FTD",
+        "PLS", "PMA", "PBP",
+        "UMN-Predominant", "LMN-Predominant",
+        "Flail-Arm", "Flail-Leg"
+    ))
+}

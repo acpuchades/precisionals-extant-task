@@ -226,7 +226,11 @@ ext_baseline <- ext_main %>%
             age_at_assessment,
             (date_of_baseline - date_of_birth) / dyears(1)
         ),
-        delta_fs = (48 - total_score) / months_from_onset
+        delta_fs = if_else(
+            months_from_onset >= 6,
+            (48 - total_score) / months_from_onset,
+            NA_real_
+        )
     )
 
 ext_alsfrs %<>% ext_alsfrs_calculate_assessment_times(ext_baseline)

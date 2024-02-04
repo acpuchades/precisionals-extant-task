@@ -3,27 +3,79 @@ suppressPackageStartupMessages({
     library(forcats)
     library(lazyeval)
     library(lubridate)
+    library(mice)
     library(rlang)
     library(stringr)
     library(tidyr)
 })
 
-q3_output_data_path <- "output/q3/timetoevent.rds"
+q3_output_root_dir <- "output/q3"
+q3_output_data_path <- file.path(q3_output_root_dir, "timetoevent.rds")
+q3_output_imputed_data_path <- file.path(q3_output_root_dir, "timetoevent_imp.rds")
 
 source("src/q3/common.r")
+
+q3_fix_imputed_types <- function(df) {
+    df %>% mutate(
+        across(c(
+            riluzole_use,
+            bulbar_onset,
+            spinal_onset,
+            cognitive_onset,
+            respiratory_onset
+        ), as.logical)
+    )
+}
+
+q3_add_derived_variables <- function(df) {
+    df %>% mutate(
+        age_category = cut(age_at_onset,
+            right = FALSE, ordered_result = TRUE,
+            breaks = c(0, 19, 30, 40, 50, 60, 70, 80, +Inf),
+            labels = c(
+                "0-18", "19-29", "30-39", "40-49",
+                "50-59", "60-69", "70-79", "80+"
+            )
+        ),
+        onset_sites = (
+            bulbar_onset + spinal_onset +
+                cognitive_onset + respiratory_onset
+        ),
+        site_of_onset = q3_as_site_of_onset(case_when(
+            bulbar_onset & spinal_onset ~ "Generalized",
+            onset_sites > 1 ~ "Multiple",
+            spinal_onset ~ "Spinal",
+            bulbar_onset ~ "Bulbar",
+            respiratory_onset ~ "Respiratory",
+            cognitive_onset ~ "Cognitive"
+        )),
+        altered_genes = (
+            (c9orf72_status == "Positive") +
+                (sod1_status == "Positive") +
+                (fus_status == "Positive") +
+                (tardbp_status == "Positive")
+        ),
+        causal_gene = q3_as_causal_gene(case_when(
+            altered_genes > 1 ~ "Multiple",
+            c9orf72_status == "Positive" ~ "C9orf72",
+            sod1_status == "Positive" ~ "SOD1",
+            fus_status == "Positive" ~ "FUS",
+            tardbp_status == "Positive" ~ "TARDBP",
+            TRUE ~ "Unknown"
+        )),
+        diagnosis_period = factor(if_else(!is.na(year_of_diagnosis),
+            {
+                period_start <- year_of_diagnosis - year_of_diagnosis %% 10
+                str_glue("{period_start}-{pmin(period_start+9, 2022, na.rm = TRUE)}")
+            },
+            NA_character_
+        ), ordered = TRUE)
+    )
+}
 
 q3_as_causal_gene <- function(x) {
     factor(x, levels = c(
         "Unknown", "C9orf72", "SOD1", "FUS", "TARDBP", "Multiple"
-    ))
-}
-
-q3_as_clinical_phenotype <- function(x) {
-    factor(x, levels = c(
-        "ALS", "ALS/FTD", "FTD",
-        "PLS", "PMA", "PBP",
-        "UMN-Predominant", "LMN-Predominant",
-        "Flail-Arm", "Flail-Leg"
     ))
 }
 
@@ -34,9 +86,10 @@ q3_as_site_of_onset <- function(x) {
 }
 
 if (file.exists(q3_output_data_path)) {
-    message("Loading cached time to event data...", appendLF = FALSE)
-    q3_data <- readRDS(q3_output_data_path)
-    message("\rLoading cached time to event data... done.")
+    q3_show_progress("Loading cached time to event data", {
+        q3_data <- readRDS(q3_output_data_path)
+        q3_data.imputed <- readRDS(q3_output_imputed_data_path)
+    })
 } else {
     q3_show_progress("Loading the dataset", suppressMessages({
         source("src/ext/main.r")
@@ -279,7 +332,6 @@ if (file.exists(q3_output_data_path)) {
 
     # NOTE: explicit casts are necessary because pmin seems to get confused
     #       when mixing NA days (POSIXct) and dyears(x) (lubridate) types.
-
     q3_show_progress("Calculating time to events", {
         q3_time_to_events <- ext_main %>%
             left_join(q3_time_to_kings, by = "id") %>%
@@ -469,6 +521,10 @@ if (file.exists(q3_output_data_path)) {
                         na.rm = TRUE
                     )
                 )
+            ) %>%
+            filter(
+                q3_is_valid_event_from_origin(event, origin),
+                duration > as.duration(0)
             )
     })
 
@@ -506,71 +562,50 @@ if (file.exists(q3_output_data_path)) {
         slice_min(time_from_onset_to_niv - time_from_onset_to_assessment, by = id, with_ties = FALSE) %>%
         select(id, vc_at_niv_abs = "vc_abs", vc_at_niv_rel = "vc_rel")
 
-    q3_base <- ext_main %>%
+    q3_base <- ext_main.anon %>%
         left_join(ext_baseline, by = "id") %>%
         left_join(
             q3_vc_at_baseline %>%
                 select(id, baseline_vc_abs, baseline_vc_rel),
             by = "id"
         ) %>%
-        mutate(
-            site = factor(site, labels = str_c("Site ", 1:9)),
-            onset_sites = bulbar_onset + spinal_onset +
-                cognitive_onset + respiratory_onset,
-            altered_genes = (
-                (c9orf72_status == "Positive") +
-                    (sod1_status == "Positive") +
-                    (fus_status == "Positive") +
-                    (tardbp_status == "Positive")
-            )
-        ) %>%
         transmute(
-            id, site, sex, delta_fs, progression_category, riluzole_use, bulbar_onset,
-            spinal_onset, cognitive_onset, respiratory_onset, baseline_vc_rel,
-            age_at_onset = calculated_age_at_onset,
-            age_category = cut(calculated_age_at_onset,
-                right = FALSE, ordered_result = TRUE,
-                breaks = c(0, 19, 30, 40, 50, 60, 70, 80, +Inf),
-                labels = c(
-                    "0-18", "19-29", "30-39", "40-49",
-                    "50-59", "60-69", "70-79", "80+"
-                )
-            ),
-            diagnosis_period,
-            diagnostic_delay = coalesce(
+            id, site, sex, baseline_vc_rel, delta_fs, progression_category, riluzole_use,
+            bulbar_onset, spinal_onset, cognitive_onset, respiratory_onset,
+            age_at_onset = calculated_age_at_onset, clinical_phenotype,
+            date_of_diagnosis, year_of_diagnosis, diagnostic_delay = coalesce(
                 (age_at_diagnosis - age_at_onset) * 12,
                 as.duration(date_of_diagnosis - date_of_onset) / dmonths(1)
             ),
-            c9orf72_status, sod1_status, fus_status, tardbp_status,
-            causal_gene = q3_as_causal_gene(case_when(
-                altered_genes > 1 ~ "Multiple",
-                c9orf72_status == "Positive" ~ "C9orf72",
-                sod1_status == "Positive" ~ "SOD1",
-                fus_status == "Positive" ~ "FUS",
-                tardbp_status == "Positive" ~ "TARDBP",
-                TRUE ~ "Unknown"
-            )),
-            site_of_onset = q3_as_site_of_onset(case_when(
-                bulbar_onset & spinal_onset ~ "Generalized",
-                onset_sites > 1 ~ "Multiple",
-                spinal_onset ~ "Spinal",
-                bulbar_onset ~ "Bulbar",
-                respiratory_onset ~ "Respiratory",
-                cognitive_onset ~ "Cognitive"
-            )),
-            clinical_phenotype = q3_as_clinical_phenotype(clinical_phenotype)
+            c9orf72_status, sod1_status, fus_status, tardbp_status
         )
+
+    q3_exclude_from_imputation <- c(
+        "id", "site", "date_of_diagnosis", "year_of_diagnosis"
+    )
+
+    q3_show_progress("Imputing data", {
+        predmat <- quickpred(q3_base)
+        imputed <- mice(q3_base, predictorMatrix = predmat)
+        q3_base.imputed <- bind_cols(
+            q3_base %>% select(all_of(q3_exclude_from_imputation)),
+            complete(imputed) %>%
+                select(-all_of(q3_exclude_from_imputation)) %>%
+                q3_fix_imputed_types()
+        )
+    })
 
     q3_data <- q3_base %>%
-        left_join(q3_time_to_events, by = "id") %>%
-        filter(
-            q3_is_valid_event_from_origin(event, origin),
-            duration > as.duration(0)
-        )
+        q3_add_derived_variables() %>%
+        left_join(q3_time_to_events, by = "id")
+
+    q3_data.imputed <- q3_base.imputed %>%
+        q3_add_derived_variables() %>%
+        left_join(q3_time_to_events, by = "id")
 
     q3_show_progress("Exporting results", {
-        output_dir <- dirname(q3_output_data_path)
-        dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+        dir.create(q3_output_root_dir, recursive = TRUE, showWarnings = FALSE)
         q3_data %>% saveRDS(q3_output_data_path)
+        q3_data.imputed %>% saveRDS(q3_output_imputed_data_path)
     })
 }

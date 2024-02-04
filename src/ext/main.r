@@ -107,19 +107,26 @@ ext_main <- ext_main %>%
     mutate(
         across(ends_with("_tested"), ext_parse_boolean),
         across(c(gastrostomy, niv, tracheostomy), ext_parse_boolean),
-        sex = case_match(
+        sex = ext_as_sex(case_match(
             sex,
             c("Man", "Male") ~ "Male",
             c("Woman", "Female") ~ "Female",
+        )),
+        riluzole_use = case_match(
+            riluzole_use,
+            "Yes" ~ TRUE,
+            "No" ~ FALSE
         ),
-        c9orf72_status = case_when(
+        c9orf72_status = ext_as_c9orf72_status(case_when(
             c9orf72_status == "Intermediate" ~ "Negative",
             TRUE ~ c9orf72_status
-        ),
-        sod1_status = case_when(
+        )),
+        sod1_status = ext_as_gene_status(case_when(
             sod1_status == "Unknown effect" ~ NA_character_,
             TRUE ~ sod1_status
-        ),
+        )),
+        fus_status = ext_as_gene_status(fus_status),
+        tardbp_status = ext_as_gene_status(tardbp_status),
         date_of_birth = coalesce(
             date_of_birth,
             make_date(str_extract(year_year_and_month_of_birth, "\\d{4}"), 1, 1),
@@ -162,13 +169,6 @@ ext_main <- ext_main %>%
             as.integer(str_extract(year_year_and_month_of_birth, "(\\d{4})-\\d{2}")),
             year(date_of_birth + dyears(age_at_diagnosis))
         ),
-        diagnosis_period = factor(if_else(!is.na(year_of_diagnosis),
-            {
-                period_start <- year_of_diagnosis - year_of_diagnosis %% 10
-                str_glue("{period_start}-{pmin(period_start+9, 2022, na.rm = TRUE)}")
-            },
-            NA_character_
-        ), ordered = TRUE),
         bulbar_onset = diagnosis == "PBP" | site_of_onset %in% c(
             "Bulbar", "Bulbaire", "Bulbar and Spinal",
             "Bulbar and Spinal",
@@ -223,7 +223,7 @@ ext_main <- ext_main %>%
             str_ends(site_of_onset, " G") ~ "L",
             str_ends(site_of_onset, " Bilat") ~ "B"
         ),
-        clinical_phenotype = coalesce(
+        clinical_phenotype = ext_as_clinical_phenotype(coalesce(
             case_match(
                 diagnosis,
                 "ALS" ~ case_match(
@@ -251,5 +251,8 @@ ext_main <- ext_main %>%
                 c("PLS", "PLS/ALS", "Suspected PLS") ~ "PLS",
                 .default = if_else(site == "Bellvitge", "ALS", NA)
             )
-        )
+        ))
     )
+
+ext_main.anon <- ext_main %>%
+    mutate(site = factor(site, labels = str_c("Site ", 1:n_distinct(site))))
