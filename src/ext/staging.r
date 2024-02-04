@@ -51,10 +51,10 @@ ext_kings <- ext_alsfrs %>%
 
 ext_mitos <- ext_alsfrs %>%
     mutate(mitos = {
-        walking_selfcare <- q8_walking <= 1 | q6_dressing_and_hygiene <= 1
+        walking_selfcare <- (q8_walking <= 1) | (q6_dressing_and_hygiene <= 1)
         swallowing <- q3_swallowing <= 1
-        communication <- q1_speech <= 1 | q4_handwriting <= 1
-        breathing <- q10_dyspnea <= 1 | q12_respiratory_insufficiency <= 2
+        communication <- (q1_speech <= 1) & (q4_handwriting <= 1)
+        breathing <- (q10_dyspnea <= 1) | (q12_respiratory_insufficiency <= 2)
         walking_selfcare + swallowing + communication + breathing
     }) %>%
     bind_rows(ext_staging_deaths) %>%
