@@ -252,6 +252,7 @@ if (file.exists(q3_output_data_path)) {
     q3_vc_at_baseline <- q3_vc_assessments %>%
         filter(
             time_from_onset >= dmonths(0),
+            time_from_diagnosis <= dmonths(6),
             !is.na(vc_abs) | !is.na(vc_rel)
         ) %>%
         slice_min(time_from_onset / dmonths(1), by = id, n = 1, with_ties = FALSE) %>%
@@ -266,6 +267,7 @@ if (file.exists(q3_output_data_path)) {
                 date_of_vc_lt_80 = "date_of_assessment",
                 age_at_vc_lt_80 = "age_at_assessment"
             )
+
         q3_time_to_vc_lt_50 <- q3_vc_assessments %>%
             filter(fvc_rel < 50 | svc_rel < 50) %>%
             slice_min(time_from_onset, n = 1, with_ties = FALSE, by = "id") %>%
