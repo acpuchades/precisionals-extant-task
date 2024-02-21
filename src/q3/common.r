@@ -2,6 +2,8 @@ library(dplyr)
 library(forcats)
 library(stringr)
 
+source("src/ext/alsfrs.r")
+
 q3_output_root_dir <- "output/q3"
 
 q3_time_of <- function(e) {
@@ -99,7 +101,17 @@ q3_add_derived_variables <- function(df) {
                 str_glue("{period_start}-{pmin(period_start+9, 2022, na.rm = TRUE)}")
             },
             NA_character_
-        ), ordered = TRUE)
+        ), ordered = TRUE),
+        progression_category = ext_as_progression_category(
+            case_when(
+                delta_fs < ext_baseline_deltafs_p25 ~ "Slow",
+                delta_fs %>% between(
+                    ext_baseline_deltafs_p25,
+                    ext_baseline_deltafs_p75
+                ) ~ "Intermediate",
+                delta_fs > ext_baseline_deltafs_p75 ~ "Fast"
+            )
+        )
     )
 }
 

@@ -13,6 +13,7 @@ suppressPackageStartupMessages({
 source("src/q3/common.r")
 
 q3_output_data_path <- file.path(q3_output_root_dir, "timetoevent.rds")
+q3_output_t2e_data_path <- file.path(q3_output_root_dir, "timetoevent_t2e.rds")
 q3_output_base_data_path <- file.path(q3_output_root_dir, "timetoevent_base.rds")
 
 q3_as_causal_gene <- function(x) {
@@ -31,6 +32,7 @@ if (file.exists(q3_output_data_path)) {
     q3_show_progress("Loading cached time to event data", {
         q3_data <- readRDS(q3_output_data_path)
         q3_base <- readRDS(q3_output_base_data_path)
+        q3_time_to_events <- readRDS(q3_output_t2e_data_path)
     })
 } else {
     q3_show_progress("Loading the dataset", suppressMessages({
@@ -514,7 +516,7 @@ if (file.exists(q3_output_data_path)) {
             by = "id"
         ) %>%
         transmute(
-            id, site, sex, baseline_vc_rel, delta_fs, progression_category, riluzole_use,
+            id, site, sex, baseline_vc_rel, delta_fs, riluzole_use,
             bulbar_onset, spinal_onset, cognitive_onset, respiratory_onset,
             age_at_onset = calculated_age_at_onset, clinical_phenotype,
             date_of_diagnosis, year_of_diagnosis, diagnostic_delay = coalesce(
@@ -530,6 +532,7 @@ if (file.exists(q3_output_data_path)) {
 
     q3_show_progress("Exporting results", {
         dir.create(q3_output_root_dir, recursive = TRUE, showWarnings = FALSE)
+        q3_time_to_events %>% saveRDS(q3_output_t2e_data_path)
         q3_base %>% saveRDS(q3_output_base_data_path)
         q3_data %>% saveRDS(q3_output_data_path)
     })
