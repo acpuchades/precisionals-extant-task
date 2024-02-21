@@ -244,6 +244,22 @@ if (file.exists(q3_output_data_path)) {
             )
     })
 
+    q3_show_progress("Calculating time to gastrostomy placement by ALSFRS-R", {
+        q3_time_to_gastrostomy_by_alsfrs <- ext_alsfrs %>%
+            filter(
+                time_from_baseline >= ddays(0),
+                is.na(q5x_cutting_food_with_gastrostomy_status_unknown) &
+                    is.na(q5a_cutting_food_without_gastrostomy) &
+                    !is.na(q5b_cutting_food_with_gastrostomy)
+            ) %>%
+            slice_min(time_from_baseline, by = "id", n = 1, with_ties = FALSE) %>%
+            select(
+                id,
+                age_at_gastrostomy_by_alsfrs = "age_at_assessment",
+                date_of_gastrostomy_by_alsfrs = "date_of_assessment"
+            )
+    })
+
     q3_show_progress("Calculating time to IMV by ALSFRS-R", {
         q3_time_to_imv_by_alsfrs <- ext_alsfrs %>%
             filter(time_from_baseline >= ddays(0), q12_respiratory_insufficiency == 0) %>%
@@ -286,6 +302,7 @@ if (file.exists(q3_output_data_path)) {
             left_join(q3_time_to_respiratory_onset, by = "id") %>%
             left_join(q3_time_to_vc_lt_80, by = "id") %>%
             left_join(q3_time_to_vc_lt_50, by = "id") %>%
+            left_join(q3_time_to_gastrostomy_by_alsfrs, by = "id") %>%
             left_join(q3_time_to_niv_by_alsfrs, by = "id") %>%
             left_join(q3_time_to_niv_23h_by_alsfrs, by = "id") %>%
             left_join(q3_time_to_imv_by_alsfrs, by = "id") %>%
@@ -360,7 +377,9 @@ if (file.exists(q3_output_data_path)) {
                     ),
                     gastrostomy = ~ coalesce(
                         as.duration(date_of_gastrostomy - .date_of_origin),
-                        dyears(age_at_gastrostomy - .age_at_origin)
+                        as.duration(date_of_gastrostomy_by_alsfrs - .date_of_origin),
+                        dyears(age_at_gastrostomy - .age_at_origin),
+                        dyears(age_at_gastrostomy_by_alsfrs - .age_at_origin)
                     ),
                     kings_1 = ~ coalesce(
                         as.duration(date_of_kings_1 - .date_of_origin),
