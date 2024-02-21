@@ -45,3 +45,6 @@ ext_resp <- ext_load_data(
         vc_rel = coalesce(fvc_rel, svc_rel),
         snip = coalesce(snip, snip_occluded, snip_unoccluded)
     )
+
+ext_resp.anon <- ext_resp %>%
+    mutate(site = factor(site, labels = str_c("Site ", 1:n_distinct(site))))
