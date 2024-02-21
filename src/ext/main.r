@@ -117,9 +117,10 @@ ext_main <- ext_main %>%
             "Yes" ~ TRUE,
             "No" ~ FALSE
         ),
-        c9orf72_status = ext_as_c9orf72_status(case_when(
-            c9orf72_status == "Intermediate" ~ "Negative",
-            TRUE ~ c9orf72_status
+        c9orf72_status = ext_as_gene_status(case_match(
+            c9orf72_status,
+            "Positive" ~ "Positive",
+            c("Intermediate", "Negative") ~ "Negative"
         )),
         sod1_status = ext_as_gene_status(case_when(
             sod1_status == "Unknown effect" ~ NA_character_,

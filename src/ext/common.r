@@ -61,10 +61,6 @@ ext_as_gene_status <- function(x) {
     factor(x, levels = c("Negative", "Positive"))
 }
 
-ext_as_c9orf72_status <- function(x) {
-    factor(x, levels = c("Negative", "Intermediate", "Positive"))
-}
-
 ext_logical_to_factor <- function(x, when_true = "Yes", when_false = "No") {
     factor(if_else(x, when_true, when_false), levels = c(when_false, when_true))
 }
