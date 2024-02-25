@@ -110,9 +110,10 @@ q3_trim_survival_groups <- function(data, group) {
         data %>% filter(causal_gene != "Multiple")
     } else if (group == "clinical_phenotype") {
         data %>% filter(clinical_phenotype %in% c(
-            "ALS", "PBP", "PLS", "PMA",
-            "Flail-Arm", "Flail-Leg",
-            "LMN-Predominant", "UMN-Predominant"
+            "ALS", "ALS/FTD", "FTD",
+            "PBP", "PLS", "PMA",
+            "LMN-Predominant", "UMN-Predominant",
+            "Flail-Arm", "Flail-Leg"
         ))
     } else if (group == "site_of_onset") {
         data %>% filter(site_of_onset != "Multiple")
@@ -204,7 +205,7 @@ for (p in q3_plots) {
                 results <- q3_analyze_survival(q3_data, origin, event, group, epoch_unit)
                 output_path <- file.path("output", "q3", str_glue(p$output_name))
                 q3_save_plot(results$plot, output_path %>% with_ext(q3_survplots_output_format))
-                q3_output_summary(results$fit, origin, event, group, output_path %>% with_ext("txt"))
+                q3_output_model_summary(results$fit, output_path %>% with_ext("txt"))
                 progress_bar$tick()
             }
         }

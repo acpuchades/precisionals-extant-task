@@ -115,6 +115,12 @@ q3_add_derived_variables <- function(df) {
     )
 }
 
+q3_output_model_summary <- function(model, path) {
+    sink(path)
+    print(model)
+    sink()
+}
+
 q3_save_plot <- function(plt, path) {
     png(path)
     plot(plt)
