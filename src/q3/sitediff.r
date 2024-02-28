@@ -8,45 +8,101 @@ source("src/ext/resp.r")
 source("src/ext/alsfrs.r")
 source("src/q3/mcox.r")
 
+q3_sitediff_output_dir <- file.path(q3_output_root_dir, "sitediff")
+
+birth_to_onset.coxph <- coxph(
+    Surv(time, status) ~ year_of_diagnosis + strata(site),
+    data = q3_survival_data %>% q3_select_event("birth", "onset", censor_after_epochs = 100)
+)
+
+ext_main %>%
+    drop_na(year_of_diagnosis, age_at_onset) %>%
+    ggplot(aes(year_of_diagnosis, age_at_onset)) +
+    geom_jitter(aes(color = site), size = 0.5, width = 0.5, height = 0.5) +
+    geom_smooth(method = "lm") +
+    theme_bw() +
+    labs(
+        title = "Year of diagnosis vs Age at onset",
+        x = "Year of diagnosis", y = "Age at onset", color = "Site"
+    )
+ggsave(file.path(q3_sitediff_output_dir, "age-at-onset-vs-year-of-diagnosis.png"))
+
+ext_main %>%
+    drop_na(age_at_onset, year_of_diagnosis) %>%
+    ggplot(aes(year_of_diagnosis, age_at_onset)) +
+    geom_jitter(alpha = 0.3, size = 0.5, width = 0.5, height = 0.5) +
+    geom_smooth(aes(color = site), method = "lm") +
+    theme_bw() +
+    facet_wrap(~site, scales = "free") +
+    labs(
+        title = "Year of diagnosis vs Age at onset among sites",
+        x = "Year of diagnosis", y = "Age at onset"
+    ) +
+    theme(legend.position = "none")
+ggsave(file.path(q3_sitediff_output_dir, "age-at-onset-vs-year-of-diagnosis-per-site.png"))
+
+ext_main %>%
+    filter(year_of_diagnosis >= 1980) %>%
+    drop_na(age_at_diagnosis, diagnosis_period) %>%
+    ggplot(aes(age_at_onset, fill = diagnosis_period)) +
+    geom_density(alpha = 0.3) +
+    labs(
+        title = "Age at onset across time",
+        x = "Age at diagnosis", fill = "Time of diagnosis"
+    ) +
+    theme_bw()
+ggsave(file.path(q3_sitediff_output_dir, "age-at-onset-across-periods.histplot.png"))
+
+ext_main %>%
+    filter(year_of_diagnosis >= 1980) %>%
+    drop_na(age_at_diagnosis, diagnosis_period) %>%
+    ggplot(aes(x = diagnosis_period, y = age_at_onset, fill = diagnosis_period)) +
+    geom_boxplot(alpha = 0.3) +
+    labs(
+        title = "Age at onset across time",
+        y = "Age at diagnosis", x = "Time of diagnosis"
+    ) +
+    theme_bw() +
+    theme(legend.position = "none")
+ggsave(file.path(q3_sitediff_output_dir, "age-at-onset-across-periods.boxplot.png"))
+
+onset_to_kings_3.coxph <- coxph(
+    Surv(time, status) ~
+        strata(site, site_of_onset, sex, causal_gene, progression_category) +
+        age_at_onset + baseline_vc_rel + diagnostic_delay,
+    data = q3_survival_data %>% q3_select_event("onset", "kings_3", censor_after_epochs = 10)
+)
+
 onset_to_diagnosis.coxph <- coxph(
-    Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
-        sex + delta_fs + age_at_onset + baseline_vc_rel +
-        c9orf72_status + sod1_status + fus_status + tardbp_status + site,
-    data = q3_survival_data.imputed %>% q3_select_event("onset", "diagnosis")
+    Surv(time, status) ~ strata(site_of_onset, sex, causal_gene, progression_category) +
+        age_at_onset + baseline_vc_rel + site,
+    data = q3_survival_data %>% q3_select_event("onset", "diagnosis", censor_after_epochs = 10)
 )
 
 diagnosis_to_niv.coxph <- coxph(
-    Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
-        sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay +
-        c9orf72_status + sod1_status + fus_status + tardbp_status + site,
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "niv")
-)
-
-diagnosis_to_kings_3.coxph <- coxph(
-    Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
-        sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay +
-        c9orf72_status + sod1_status + fus_status + tardbp_status + site,
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "kings_3")
+    Surv(time, status) ~ strata(site_of_onset, sex, causal_gene, progression_category) +
+        age_at_onset + baseline_vc_rel + diagnostic_delay + site,
+    data = q3_survival_data %>% q3_select_event("diagnosis", "niv", censor_after_epochs = 10)
 )
 
 diagnosis_to_gastrostomy.coxph <- coxph(
-    Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
-        sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay +
-        c9orf72_status + sod1_status + fus_status + tardbp_status + site,
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "gastrostomy")
+    Surv(time, status) ~
+        strata(site_of_onset, sex, progression_category, causal_gene) +
+        age_at_onset + baseline_vc_rel + diagnostic_delay + site,
+    data = q3_survival_data %>% q3_select_event("diagnosis", "gastrostomy", censor_after_epochs = 10)
 )
 
 diagnosis_to_death.coxph <- coxph(
-    Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
-        sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay +
-        c9orf72_status + sod1_status + fus_status + tardbp_status + site,
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "death")
+    Surv(time, status) ~
+        strata(site_of_onset, sex, causal_gene, progression_category) +
+        age_at_onset + baseline_vc_rel + diagnostic_delay + site,
+    data = q3_survival_data %>% q3_select_event("diagnosis", "death", censor_after_epochs = 10)
 )
 
-q3_sitediff_output_dir <- file.path(q3_output_root_dir, "sitediff")
 dir.create(q3_sitediff_output_dir, showWarnings = FALSE, recursive = TRUE)
+q3_output_model_summary(birth_to_onset.coxph, file.path(q3_sitediff_output_dir, "birth-to-onset.txt"))
+q3_output_model_summary(onset_to_kings_3.coxph, file.path(q3_sitediff_output_dir, "onset-to-kings_3.txt"))
 q3_output_model_summary(onset_to_diagnosis.coxph, file.path(q3_sitediff_output_dir, "onset-to-diagnosis.txt"))
-q3_output_model_summary(diagnosis_to_kings_3.coxph, file.path(q3_sitediff_output_dir, "diagnosis-to-kings_3.txt"))
 q3_output_model_summary(diagnosis_to_niv.coxph, file.path(q3_sitediff_output_dir, "diagnosis-to-niv.txt"))
 q3_output_model_summary(diagnosis_to_gastrostomy.coxph, file.path(q3_sitediff_output_dir, "diagnosis-to-gastrostomy.txt"))
 q3_output_model_summary(diagnosis_to_death.coxph, file.path(q3_sitediff_output_dir, "diagnosis-to-death.txt"))

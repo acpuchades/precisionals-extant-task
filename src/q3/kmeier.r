@@ -72,23 +72,27 @@ q3_plots <- list(
     list(
         origins = "birth",
         events = "onset",
+        censor_after = dyears(100),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "birth",
         events = "onset",
+        censor_after = dyears(100),
         groups = names(q3_group_labels),
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     ),
     list(
         origins = c("onset", "diagnosis"),
         events = names(q3_event_labels),
+        censor_after = dyears(10),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = c("onset", "diagnosis"),
         events = names(q3_event_labels),
         groups = names(q3_group_labels),
+        censor_after = dyears(10),
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     )
 )
@@ -126,28 +130,32 @@ q3_trim_survival_groups <- function(data, group) {
     }
 }
 
-q3_analyze_survival <- function(data, origin, event, group = NULL, unit = "years") {
+q3_analyze_survival <- function(data, origin, event, group = NULL, censor_after = NULL, unit = "years") {
     origin_lbl <- q3_origin_labels[[origin]]
     event_lbl <- q3_event_labels[[event]]
     title <- q3_str_to_title(event_lbl)
     xlab <- str_glue("Time from {origin_lbl}, {unit}")
 
-    data %<>%
-        filter(.data$origin == .env$origin, .data$event == .env$event) %>%
-        mutate(duration = duration / lubridate::duration(1, unit))
+    data %<>% filter(.data$origin == .env$origin, .data$event == .env$event)
+    if (!is.null(censor_after)) {
+        data %<>% mutate(
+            status = if_else((status == "event") & (duration <= censor_after), "event", "censored"),
+            duration = pmin(duration, censor_after)
+        )
+    }
+    data %<>% mutate(duration = duration / lubridate::duration(1, unit))
 
     if (is.null(group)) {
         km_fit <- survfit2(Surv(duration, status == "event") ~ 1, data)
         km_plot <- ggsurvfit(km_fit) + add_quantile()
     } else {
         group_lbl <- q3_group_labels[[group]]
-        data %<>% q3_trim_survival_groups(group)
+        data <- q3_trim_survival_groups(data, group)
         km_fit <- survfit2(as.formula(
             str_glue("Surv(duration, status == 'event') ~ {group}")
         ), data)
         km_plot <- ggsurvfit(km_fit) +
-            add_legend_title(q3_str_to_sentence(group_lbl)) +
-            add_pvalue("annotation")
+            add_legend_title(q3_str_to_sentence(group_lbl))
     }
 
     km_plot <- km_plot +
@@ -202,7 +210,7 @@ for (p in q3_plots) {
             }
 
             for (group in p$groups %||% list(NULL)) {
-                results <- q3_analyze_survival(q3_data, origin, event, group, epoch_unit)
+                results <- q3_analyze_survival(q3_data, origin, event, group, unit = epoch_unit, censor_after = p$censor_after)
                 output_path <- file.path("output", "q3", str_glue(p$output_name))
                 q3_save_plot(results$plot, output_path %>% with_ext(q3_survplots_output_format))
                 q3_output_model_summary(results$fit, output_path %>% with_ext("txt"))

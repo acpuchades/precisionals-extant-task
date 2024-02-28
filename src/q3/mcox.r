@@ -1,4 +1,3 @@
-library(broom)
 library(coxme)
 library(magrittr)
 library(survival)
@@ -8,10 +7,10 @@ source("src/q3/common.r")
 source("src/q3/timetoevent.r")
 source("src/q3/impute.r")
 
-q3_as_survival_data <- function(data, unit = "months", censor_after = NULL) {
+q3_as_survival_data <- function(data, unit = "years", censor_after = NULL) {
     data %<>%
         mutate(
-            status = if_else(status == "event", 1, 0),
+            status = as.integer(status == "event"),
             time = duration / lubridate::duration(1, unit)
         ) %>%
         filter(time > 0)
@@ -26,16 +25,7 @@ q3_as_survival_data <- function(data, unit = "months", censor_after = NULL) {
     data
 }
 
-q3_survival_data <- q3_data %>%
-    select(-c(causal_gene, age_category, site_of_onset)) %>%
-    filter(
-        bulbar_onset == TRUE | spinal_onset == TRUE | respiratory_onset == TRUE | cognitive_onset == TRUE,
-        year_of_diagnosis >= 2010
-    ) %>%
-    q3_as_survival_data()
-
-q3_survival_data.imputed <- q3_data.imputed %>%
-    select(-c(causal_gene, age_category, site_of_onset)) %>%
+q3_survival_data <- q3_data.imputed %>%
     filter(
         bulbar_onset == TRUE | spinal_onset == TRUE | respiratory_onset == TRUE | cognitive_onset == TRUE,
         year_of_diagnosis >= 2010
@@ -47,7 +37,7 @@ onset_to_diagnosis.mcox <- coxme(
         sex + delta_fs + age_at_onset + baseline_vc_rel + # clinical_phenotype +
         c9orf72_status + sod1_status + fus_status + tardbp_status +
         (1 | site),
-    data = q3_survival_data.imputed %>% q3_select_event("onset", "diagnosis")
+    data = q3_survival_data %>% q3_select_event("onset", "diagnosis", censor_after_epochs = 10)
 )
 
 diagnosis_to_respiratory_onset.mcox <- coxme(
@@ -55,7 +45,7 @@ diagnosis_to_respiratory_onset.mcox <- coxme(
         sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay + # clinical_phenotype +
         c9orf72_status + sod1_status + fus_status + tardbp_status +
         (1 | site),
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "respiratory_onset")
+    data = q3_survival_data %>% q3_select_event("diagnosis", "respiratory_onset", censor_after_epochs = 10)
 )
 
 diagnosis_to_walking_support.mcox <- coxme(
@@ -63,35 +53,35 @@ diagnosis_to_walking_support.mcox <- coxme(
         sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay + # clinical_phenotype +
         c9orf72_status + sod1_status + fus_status + tardbp_status +
         (1 | site),
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "walking_support")
+    data = q3_survival_data %>% q3_select_event("diagnosis", "walking_support", censor_after_epochs = 10)
 )
 
 diagnosis_to_death.mcox <- coxme(
     Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
         sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay +
         c9orf72_status + sod1_status + fus_status + tardbp_status + (1 | site),
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "death")
+    data = q3_survival_data %>% q3_select_event("diagnosis", "death", censor_after_epochs = 10)
 )
 
 diagnosis_to_niv.mcox <- coxme(
     Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
         sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay +
         c9orf72_status + sod1_status + fus_status + tardbp_status + (1 | site),
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "niv")
+    data = q3_survival_data %>% q3_select_event("diagnosis", "niv", censor_after_epochs = 10)
 )
 
 diagnosis_to_gastrostomy.mcox <- coxme(
     Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
         sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay +
         c9orf72_status + sod1_status + fus_status + tardbp_status + (1 | site),
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "gastrostomy")
+    data = q3_survival_data %>% q3_select_event("diagnosis", "gastrostomy", censor_after_epochs = 10)
 )
 
 diagnosis_to_tracheostomy.mcox <- coxme(
     Surv(time, status) ~ bulbar_onset + spinal_onset + respiratory_onset + cognitive_onset +
         sex + delta_fs + age_at_onset + baseline_vc_rel + diagnostic_delay +
         c9orf72_status + sod1_status + fus_status + tardbp_status + (1 | site),
-    data = q3_survival_data.imputed %>% q3_select_event("diagnosis", "tracheostomy")
+    data = q3_survival_data %>% q3_select_event("diagnosis", "tracheostomy", censor_after_epochs = 10)
 )
 
 q3_mcox_output_dir <- file.path(q3_output_root_dir, "mcox")

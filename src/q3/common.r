@@ -43,13 +43,37 @@ q3_is_valid_event_from_origin <- function(event, origin) {
     )
 }
 
-q3_select_event <- function(data, origin, event, epoch = dmonths(1)) {
-    data %>%
-        filter(
-            .data$origin == .env$origin,
-            .data$event == .env$event
+q3_as_survival_data <- function(data, unit = "years", censor_after = NULL) {
+    data %<>%
+        mutate(
+            status = as.integer(status == "event"),
+            time = duration / lubridate::duration(1, unit)
         ) %>%
+        filter(time > 0)
+
+    if (!is.null(censor_after)) {
+        data %<>% mutate(
+            status = if_else(status == 1 & duration <= censor_after, 1, 0),
+            time = min(time, censor_after / lubridate::duration(1, unit))
+        )
+    }
+
+    data
+}
+
+q3_select_event <- function(data, origin, event, epoch = dmonths(1), censor_after_epochs = NULL) {
+    data %<>%
+        filter(.data$origin == .env$origin, .data$event == .env$event) %>%
         select(-origin, -event, -time_to_event, -time_to_loss)
+
+    if (!is.null(censor_after_epochs)) {
+        data %<>% mutate(
+            status = as.integer((status == 1) & (time <= censor_after_epochs)),
+            time = pmin(time, censor_after_epochs)
+        )
+    }
+
+    data
 }
 
 q3_show_progress <- function(m, f) {
@@ -74,8 +98,7 @@ q3_add_derived_variables <- function(df) {
                 cognitive_onset + respiratory_onset
         ),
         site_of_onset = q3_as_site_of_onset(case_when(
-            bulbar_onset & spinal_onset ~ "Generalized",
-            onset_sites > 1 ~ "Multiple",
+            onset_sites > 1 ~ "Generalized",
             spinal_onset ~ "Spinal",
             bulbar_onset ~ "Bulbar",
             respiratory_onset ~ "Respiratory",
