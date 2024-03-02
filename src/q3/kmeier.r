@@ -68,29 +68,50 @@ q3_group_labels <- list(
     riluzole_use = "riluzole use"
 )
 
+q3_clinical_milestones <- names(q3_event_labels)[
+    !(names(q3_event_labels) %in% c("onset", "diagnosis"))
+]
+
 q3_plots <- list(
     list(
         origins = "birth",
         events = "onset",
+        event_required = TRUE,
         censor_after = dyears(100),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "birth",
         events = "onset",
+        event_required = TRUE,
         censor_after = dyears(100),
         groups = names(q3_group_labels),
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     ),
     list(
+        origins = "onset",
+        events = "diagnosis",
+        event_required = TRUE,
+        censor_after = dyears(10),
+        output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
+    ),
+    list(
+        origins = "onset",
+        events = "diagnosis",
+        event_required = TRUE,
+        censor_after = dyears(10),
+        groups = names(q3_group_labels),
+        output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
+    ),
+    list(
         origins = c("onset", "diagnosis"),
-        events = names(q3_event_labels),
+        events = q3_clinical_milestones,
         censor_after = dyears(10),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = c("onset", "diagnosis"),
-        events = names(q3_event_labels),
+        events = q3_clinical_milestones,
         groups = names(q3_group_labels),
         censor_after = dyears(10),
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
@@ -130,7 +151,7 @@ q3_trim_survival_groups <- function(data, group) {
     }
 }
 
-q3_analyze_survival <- function(data, origin, event, group = NULL, censor_after = NULL, unit = "years") {
+q3_analyze_survival <- function(data, origin, event, group = NULL, event_required = FALSE, censor_after = NULL, unit = "years") {
     origin_lbl <- q3_origin_labels[[origin]]
     event_lbl <- q3_event_labels[[event]]
     title <- q3_str_to_title(event_lbl)
@@ -144,6 +165,10 @@ q3_analyze_survival <- function(data, origin, event, group = NULL, censor_after 
         )
     }
     data %<>% mutate(duration = duration / lubridate::duration(1, unit))
+
+    if (event_required) {
+        data %<>% filter(status == "event")
+    }
 
     if (is.null(group)) {
         km_fit <- survfit2(Surv(duration, status == "event") ~ 1, data)
@@ -164,17 +189,6 @@ q3_analyze_survival <- function(data, origin, event, group = NULL, censor_after 
         labs(title = title, x = xlab, y = NULL)
 
     list("fit" = km_fit, "plot" = km_plot)
-}
-
-q3_output_summary <- function(fit, origin, event, group, path) {
-    sink(path %>% with_ext("txt"))
-    cat(str_glue("# TIME FROM {origin} TO {event}"))
-    if (!is.null(group)) {
-        cat(str_glue(" BY {group}"))
-    }
-    cat("\n\n")
-    print(fit)
-    sink()
 }
 
 q3_save_plot <- function(plot, path, width = q3_survplots_output_width,
@@ -201,6 +215,8 @@ progress_bar$tick(0)
 for (p in q3_plots) {
     for (origin in p$origins) {
         epoch_unit <- p$unit %||% "years"
+        event_required <- p$event_required %||% FALSE
+
         for (event in p$events) {
             if (!q3_is_valid_event_from_origin(event, origin)) {
                 skip_groups <- length(p$groups %||% list(NULL))
@@ -210,7 +226,11 @@ for (p in q3_plots) {
             }
 
             for (group in p$groups %||% list(NULL)) {
-                results <- q3_analyze_survival(q3_data, origin, event, group, unit = epoch_unit, censor_after = p$censor_after)
+                results <- q3_analyze_survival(
+                    q3_data, origin, event, group,
+                    unit = epoch_unit, event_required = event_required,
+                    censor_after = p$censor_after
+                )
                 output_path <- file.path("output", "q3", str_glue(p$output_name))
                 q3_save_plot(results$plot, output_path %>% with_ext(q3_survplots_output_format))
                 q3_output_model_summary(results$fit, output_path %>% with_ext("txt"))
