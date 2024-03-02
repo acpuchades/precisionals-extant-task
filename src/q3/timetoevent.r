@@ -24,7 +24,7 @@ q3_as_causal_gene <- function(x) {
 
 q3_as_site_of_onset <- function(x) {
     factor(x, levels = c(
-        "Spinal", "Bulbar", "Cognitive", "Respiratory", "Generalized", "Multiple"
+        "Spinal", "Bulbar", "Cognitive", "Respiratory", "Generalized"
     ))
 }
 
