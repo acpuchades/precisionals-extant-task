@@ -248,9 +248,8 @@ if (file.exists(q3_output_data_path)) {
         q3_time_to_gastrostomy_by_alsfrs <- ext_alsfrs %>%
             filter(
                 time_from_baseline >= ddays(0),
-                is.na(q5x_cutting_food_with_gastrostomy_status_unknown) &
-                    is.na(q5a_cutting_food_without_gastrostomy) &
-                    !is.na(q5b_cutting_food_with_gastrostomy)
+                !is.na(q5b_cutting_food_with_gastrostomy) &
+                    is.na(q5a_cutting_food_without_gastrostomy)
             ) %>%
             slice_min(time_from_baseline, by = "id", n = 1, with_ties = FALSE) %>%
             select(
@@ -538,11 +537,12 @@ if (file.exists(q3_output_data_path)) {
             id, site, sex, baseline_vc_rel, delta_fs, riluzole_use,
             bulbar_onset, spinal_onset, cognitive_onset, respiratory_onset,
             age_at_onset = calculated_age_at_onset, clinical_phenotype,
-            date_of_diagnosis, year_of_diagnosis, diagnostic_delay = coalesce(
+            date_of_diagnosis, year_of_diagnosis,
+            c9orf72_status, sod1_status, fus_status, tardbp_status,
+            diagnostic_delay = coalesce(
                 (age_at_diagnosis - age_at_onset) * 12,
                 as.duration(date_of_diagnosis - date_of_onset) / dmonths(1)
-            ),
-            c9orf72_status, sod1_status, fus_status, tardbp_status
+            )
         )
 
     q3_data <- q3_base %>%

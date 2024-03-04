@@ -138,9 +138,33 @@ q3_add_derived_variables <- function(df) {
     )
 }
 
-q3_output_model_summary <- function(model, path) {
+q3_plot_coxph <- function(model, ...) {
+    zph <- cox.zph(model)
+    nfigs <- nrow(zph$table) - 1
+    nrows <- round(sqrt(nfigs))
+    ncols <- nrows + as.integer(nrows^2 < nfigs)
+    par(mfrow = c(nrows, ncols))
+    for (i in 1:(nrow(zph$table) - 1)) {
+        plot(zph[i], col = "red", ...)
+    }
+    par(mfrow = c(1, 1))
+    zph
+}
+
+q3_print_object <- function(x, path) {
     sink(path)
-    print(model)
+    if (first(class(x)) == "list") {
+        for (key in names(x)) {
+            if (key != "") {
+                cat(str_glue("# {key}\n"))
+                cat("\n\n")
+            }
+            print(x[[key]])
+            cat("\n")
+        }
+    } else {
+        print(x)
+    }
     sink()
 }
 

@@ -5,7 +5,7 @@ suppressPackageStartupMessages({
     library(ggplot2)
 })
 
-source("src/q3/common.r")
+source("src/q3/timetoevent.r")
 
 q3_impute_root_dir <- file.path(q3_output_root_dir, "impute")
 q3_output_imputed_data_path <- file.path(q3_output_root_dir, "timetoevent_imp.rds")
@@ -26,14 +26,12 @@ q3_header_cols <- c("id", "site")
 q3_exclude_from_imputation <- c("date_of_diagnosis", "year_of_diagnosis")
 
 if (file.exists(q3_output_imputed_data_path)) {
-    q3_show_progress("Loading cached time to event data", {
+    q3_show_progress("Loading cached imputed data", {
         q3_base.mids <- readRDS(q3_output_base_mids_data_path)
         q3_data.imputed <- readRDS(q3_output_imputed_data_path)
         q3_base.imputed <- readRDS(q3_output_base_imputed_data_path)
     })
 } else {
-    source("src/q3/timetoevent.r")
-
     q3_show_progress("Imputing data", {
         input <- q3_base %>% select(-all_of(q3_exclude_from_imputation))
         q3_base.mids <- mice(input, predictorMatrix = quickpred(input))
@@ -46,10 +44,9 @@ if (file.exists(q3_output_imputed_data_path)) {
         right_join(
             complete(q3_base.mids) %>% q3_fix_imputed_types(),
             by = q3_header_cols
-        ) %>%
-        q3_add_derived_variables()
+        )
 
-    q3_data.imputed <- q3_base.header %>%
+    q3_data.imputed <- q3_base.original %>%
         right_join(
             complete(q3_base.mids, action = "long") %>% q3_fix_imputed_types(),
             by = q3_header_cols
@@ -58,14 +55,13 @@ if (file.exists(q3_output_imputed_data_path)) {
         left_join(q3_time_to_events, by = "id", relationship = "many-to-many")
 
     q3_show_progress("Exporting results", {
-        dir.create(q3_output_root_dir, recursive = TRUE, showWarnings = FALSE)
-        dir.create(q3_impute_root_dir, showWarnings = FALSE, recursive = TRUE)
-
         q3_base.mids %>% saveRDS(q3_output_base_mids_data_path)
         q3_data.imputed %>% saveRDS(q3_output_imputed_data_path)
         q3_base.imputed %>% saveRDS(q3_output_base_imputed_data_path)
     })
 }
+
+dir.create(q3_impute_root_dir, showWarnings = FALSE, recursive = TRUE)
 
 ggmice(q3_base.mids, aes(age_at_onset)) +
     geom_density() +
@@ -110,6 +106,30 @@ ggmice(q3_base.mids, aes(clinical_phenotype, diagnostic_delay)) +
     coord_flip() +
     labs(title = "Clinical phenotype vs Diagnostic delay: observed vs imputed")
 ggsave("output/q3/impute/mice-clinical_phenotype-vs-diagnostic_delay.png")
+
+ggmice(q3_base.mids, aes(as.logical(bulbar_onset), delta_fs)) +
+    geom_violin() +
+    coord_flip() +
+    labs(title = "Bulbar onset vs DeltaFS: observed vs imputed")
+ggsave("output/q3/impute/mice-bulbar_onset-vs-delta_fs.png")
+
+ggmice(q3_base.mids, aes(as.logical(spinal_onset), delta_fs)) +
+    geom_violin() +
+    coord_flip() +
+    labs(title = "Spinal onset vs DeltaFS: observed vs imputed")
+ggsave("output/q3/impute/mice-spinal_onset-vs-delta_fs.png")
+
+ggmice(q3_base.mids, aes(as.logical(cognitive_onset), delta_fs)) +
+    geom_violin() +
+    coord_flip() +
+    labs(title = "Cognitive onset vs DeltaFS: observed vs imputed")
+ggsave("output/q3/impute/mice-cognitive_onset-vs-delta_fs.png")
+
+ggmice(q3_base.mids, aes(clinical_phenotype, delta_fs)) +
+    geom_violin() +
+    coord_flip() +
+    labs(title = "Clinical phenotype vs DeltaFS: observed vs imputed")
+ggsave("output/q3/impute/mice-clinical_phenotype-vs-delta_fs.png")
 
 plot_pred(q3_base.mids$predictorMatrix) +
     theme(axis.text.x = element_text(angle = 45, hjust = 0))

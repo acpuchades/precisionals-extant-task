@@ -252,7 +252,14 @@ ext_main <- ext_main %>%
                 c("PLS", "PLS/ALS", "Suspected PLS") ~ "PLS",
                 .default = if_else(site == "Bellvitge", "ALS", NA)
             )
-        ))
+        )),
+        diagnosis_period = factor(if_else(!is.na(year_of_diagnosis),
+            {
+                period_start <- year_of_diagnosis - year_of_diagnosis %% 10
+                str_glue("{period_start}-{pmin(period_start+9, 2022, na.rm = TRUE)}")
+            },
+            NA_character_
+        ), ordered = TRUE)
     )
 
 ext_main.anon <- ext_main %>%

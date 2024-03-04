@@ -233,7 +233,7 @@ for (p in q3_plots) {
                 )
                 output_path <- file.path("output", "q3", str_glue(p$output_name))
                 q3_save_plot(results$plot, output_path %>% with_ext(q3_survplots_output_format))
-                q3_output_model_summary(results$fit, output_path %>% with_ext("txt"))
+                q3_print_object(results$fit, output_path %>% with_ext("txt"))
                 progress_bar$tick()
             }
         }
