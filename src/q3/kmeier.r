@@ -16,8 +16,8 @@ source("src/ext/resp.r")
 source("src/q3/common.r")
 source("src/q3/timetoevent.r")
 
-q3_survplots_output_width <- 7
-q3_survplots_output_height <- 7
+q3_survplots_output_width <- 10
+q3_survplots_output_height <- 10
 q3_survplots_output_dpi <- 300
 q3_survplots_output_format <- "png"
 
