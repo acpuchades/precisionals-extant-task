@@ -3,6 +3,7 @@ suppressPackageStartupMessages({
     library(xfun)
     library(ggmice)
     library(ggplot2)
+    library(visdat)
 })
 
 source("src/q3/timetoevent.r")
@@ -62,6 +63,12 @@ if (file.exists(q3_output_imputed_data_path)) {
 }
 
 dir.create(q3_impute_root_dir, showWarnings = FALSE, recursive = TRUE)
+
+vis_dat(q3_base, facet=site)
+ggsave(file.path(q3_impute_root_dir, "missing-per-site.png"), bg="white", width=12, height=7, dpi=300)
+
+vis_miss(q3_base) + theme(plot.margin = margin(0, 2, 0, 0, "cm"))
+ggsave(file.path(q3_impute_root_dir, "missing-overall.png"), bg="white", width=10, height=7, dpi=300)
 
 ggmice(q3_base.mids, aes(age_at_onset)) +
     geom_density() +
