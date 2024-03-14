@@ -138,6 +138,14 @@ q3_add_derived_variables <- function(df) {
     )
 }
 
+q3_summary_table <- function(...) {
+    t <- table(...)
+    mt <- margin.table(t, margin = 1)
+    pt <- round(prop.table(t, margin = 1) * 100, 2)
+    colnames(pt) <- str_c(colnames(pt), " (%)")
+    cbind(n = mt, t, pt)
+}
+
 q3_plot_coxph <- function(model, ...) {
     zph <- cox.zph(model)
     nfigs <- nrow(zph$table) - 1

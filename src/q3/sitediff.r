@@ -69,14 +69,6 @@ png(file.path(q3_sitediff_output_dir, "diagnosis-to-death.png"), width = 1000, h
 q3_plot_coxph(diagnosis_to_death.sitediff)
 dev.off()
 
-q3_summary_table <- function(...) {
-    t <- table(...)
-    mt <- margin.table(t, margin = 1)
-    pt <- round(prop.table(t, margin = 1) * 100, 2)
-    colnames(pt) <- str_c(colnames(pt), " (%)")
-    cbind(n = mt, t, pt)
-}
-
 sink(file.path(q3_sitediff_output_dir, "niv-per-site.txt"))
 cat("# NIV STATUS PER SITE\n\n")
 patients_info %>%

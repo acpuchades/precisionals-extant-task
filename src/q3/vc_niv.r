@@ -1,5 +1,10 @@
 library(dplyr)
 
+source("src/ext/main.r")
+source("src/ext/alsfrs.r")
+source("src/ext/resp.r")
+source("src/q3/timetoevent.r")
+
 time_of_niv_as_reported <- ext_main.anon %>%
   select(id, niv, date_of_niv, age_at_niv)
 
@@ -54,11 +59,22 @@ vc_assessments <- ext_resp %>%
   select(-date_of_baseline, -age_at_baseline)
 
 vc_and_niv_assessments <- vc_assessments %>%
-  bind_rows(niv_assessments %>% semi_join(vc_assessments, by = "id")) %>%
+  mutate(time_of_last_vc_assessment = time_from_baseline) %>%
+  bind_rows(
+    niv_assessments %>%
+      semi_join(vc_assessments, by = "id") %>%
+      mutate(time_of_last_niv_assessment = time_from_baseline)
+  ) %>%
   group_by(id) %>%
   arrange(time_from_baseline, .by_group = TRUE) %>%
-  fill(niv, vc_rel) %>%
-  ungroup()
+  fill(vc_rel, time_of_last_vc_assessment, niv, time_of_last_niv_assessment) %>%
+  ungroup() %>%
+  mutate(
+    vc_rel = if_else(
+      (time_from_baseline - time_of_last_vc_assessment) <= dmonths(6),
+      vc_rel, NA
+    )
+  )
 
 vc_at_niv_start <- vc_and_niv_assessments %>%
   filter(niv == TRUE) %>%
@@ -86,5 +102,4 @@ patients_info <- q3_base %>%
   left_join(vc_summary, by = "id") %>%
   left_join(vc_at_niv_start, by = "id")
 
-patients_info.vc_at_niv <- patients_info %>%
-  filter(niv == TRUE, !(site %in% c("Site 3", "Site 7")))
+patients_info.vc_at_niv <- patients_info %>% filter(niv == TRUE)
