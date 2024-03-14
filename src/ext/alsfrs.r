@@ -5,7 +5,8 @@ suppressPackageStartupMessages({
     library(tidyr)
 })
 
-source("src/ext/main.r")
+source("src/ext/common.r")
+ext_source("src/ext/main.r")
 
 ext_as_progression_category <- function(x) {
     x %>% factor(

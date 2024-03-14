@@ -1,10 +1,16 @@
 library(dplyr)
 library(forcats)
+library(ggsci)
 library(stringr)
 
-source("src/ext/alsfrs.r")
+source("src/ext/common.r")
+
+ext_source("src/ext/alsfrs.r")
 
 q3_output_root_dir <- "output/q3"
+
+scale_fill_custom <- scale_fill_frontiers
+scale_colour_custom <- scale_color_custom <- scale_color_frontiers
 
 q3_time_of <- function(e) {
     all_of(c(str_glue("date_of_{e}"), str_glue("age_at_{e}")))

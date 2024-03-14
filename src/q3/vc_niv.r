@@ -1,9 +1,11 @@
 library(dplyr)
 
-source("src/ext/main.r")
-source("src/ext/alsfrs.r")
-source("src/ext/resp.r")
-source("src/q3/timetoevent.r")
+source("src/ext/common.r")
+
+ext_source("src/ext/main.r")
+ext_source("src/ext/alsfrs.r")
+ext_source("src/ext/resp.r")
+ext_source("src/q3/timetoevent.r")
 
 time_of_niv_as_reported <- ext_main.anon %>%
   select(id, niv, date_of_niv, age_at_niv)
@@ -96,7 +98,7 @@ vc_summary <- vc_assessments %>% summarize(
 
 patients_info <- q3_base %>%
   q3_add_derived_variables() %>%
-  transmute(id, site, diagnosis_period) %>%
+  transmute(id, site, year_of_diagnosis, diagnosis_period) %>%
   left_join(ext_main %>% select(id, vital_status), by = "id") %>%
   left_join(time_of_niv, by = "id") %>%
   left_join(vc_summary, by = "id") %>%

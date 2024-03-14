@@ -5,6 +5,29 @@ suppressPackageStartupMessages({
     library(tidyr)
 })
 
+ext_source <- function(path) {
+    if (!exists("ext_source_level__")) {
+        ext_source_level__ <- 0
+        ext_source_interactive__ <- FALSE
+    } else {
+        ext_source_level__ <- ext_source_level__ + 1
+    }
+
+    source(path)
+
+    ext_source_level__ <- ext_source_level__ - 1
+    if (ext_source_level__ == 0) {
+        rm(ext_source_level__)
+        rm(ext_source_interactive__)
+    }
+}
+
+ext_interactive <- function(f) {
+    if (!exists("ext_source_interactive__") || ext_source_interactive__ == TRUE) {
+        eval(f)
+    }
+}
+
 ext_load_data <- function(path, ...) {
     data_dir <- Sys.getenv("PALS_EXTANT_DATADIR", unset = "./data")
     read_excel(file.path(data_dir, path), na = c(

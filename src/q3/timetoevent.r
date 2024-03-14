@@ -10,7 +10,9 @@ suppressPackageStartupMessages({
     library(xfun)
 })
 
-source("src/q3/common.r")
+source("src/ext/common.r")
+
+ext_source("src/q3/common.r")
 
 q3_output_data_path <- file.path(q3_output_root_dir, "timetoevent.rds")
 q3_output_t2e_data_path <- file.path(q3_output_root_dir, "timetoevent_t2e.rds")
@@ -36,9 +38,9 @@ if (file.exists(q3_output_data_path)) {
     })
 } else {
     q3_show_progress("Loading the dataset", suppressMessages({
-        source("src/ext/main.r")
-        source("src/ext/resp.r")
-        source("src/ext/staging.r")
+        ext_source("src/ext/main.r")
+        ext_source("src/ext/resp.r")
+        ext_source("src/ext/staging.r")
     }))
 
     q3_calculate_time_to_stage <- function(data, time, stage, values) {

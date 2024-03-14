@@ -11,10 +11,10 @@ suppressPackageStartupMessages({
     library(xfun)
 })
 
-source("src/ext/resp.r")
+source("src/ext/common.r")
 
-source("src/q3/common.r")
-source("src/q3/timetoevent.r")
+ext_source("src/ext/resp.r")
+ext_source("src/q3/timetoevent.r")
 
 q3_survplots_output_width <- 10
 q3_survplots_output_height <- 10

@@ -3,7 +3,9 @@ library(magrittr)
 library(survival)
 library(writexl)
 
-source("src/q3/impute.r")
+source("src/ext/common.r")
+
+ext_source("src/q3/impute.r")
 
 q3_survival_data <- q3_data.imputed %>%
     filter(year_of_diagnosis >= 2010) %>%

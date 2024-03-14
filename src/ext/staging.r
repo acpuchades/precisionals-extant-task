@@ -1,5 +1,6 @@
-source("src/ext/main.r")
-source("src/ext/alsfrs.r")
+source("src/ext/common.r")
+ext_source("src/ext/main.r")
+ext_source("src/ext/alsfrs.r")
 
 ext_staging_deaths <- ext_main %>%
     filter(vital_status == "Deceased") %>%
