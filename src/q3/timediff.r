@@ -11,7 +11,6 @@ q3_survival_data <- q3_data.imputed %>%
     mutate(site = fct_drop(site)) %>%
     q3_as_survival_data()
 
-
 birth_to_onset.timediff <- coxph(
     Surv(time, status) ~ year_of_diagnosis + strata(site, sex, causal_gene),
     data = q3_survival_data %>%
@@ -101,7 +100,7 @@ ext_interactive({
         print()
     sink()
 
-    patients_info.vc_at_niv %>%
+    patients_info.niv %>%
         drop_na(diagnosis_period) %>%
         mutate(site = fct_drop(site)) %>%
         ggplot(aes(vc_at_niv, fill = diagnosis_period)) +

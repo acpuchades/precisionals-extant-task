@@ -104,4 +104,4 @@ patients_info <- q3_base %>%
   left_join(vc_summary, by = "id") %>%
   left_join(vc_at_niv_start, by = "id")
 
-patients_info.vc_at_niv <- patients_info %>% filter(niv == TRUE)
+patients_info.niv <- filter(patients_info, niv == TRUE)

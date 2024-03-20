@@ -48,7 +48,8 @@ diagnosis_to_death.sitediff <- coxph(
     data = q3_survival_data %>% q3_select_event("diagnosis", "death", censor_after_epochs = 10)
 )
 
-vc_at_niv_across_sites.aov <- aov(vc_at_niv ~ site, patients_info.vc_at_niv)
+patients.current <- filter(patients_info, year_of_diagnosis >= 2010)
+patients.current.niv <- filter(patients.current, niv == TRUE)
 
 ext_interactive({
     q3_sitediff_output_dir <- file.path(q3_output_root_dir, "sitediff")
@@ -75,30 +76,29 @@ ext_interactive({
     dev.off()
 
     sink(file.path(q3_sitediff_output_dir, "niv-per-site.txt"))
-    cat("# NIV STATUS PER SITE\n\n")
-    patients_info %>%
+    cat("# NIV STATUS PER SITE (2010-2022)\n\n")
+    patients.current %>%
         filter(vital_status == "Deceased") %$%
         q3_summary_table(site, niv, useNA = "ifany") %>%
         print()
     sink()
 
     sink(file.path(q3_sitediff_output_dir, "vc-niv-xtab-per-site.txt"))
-    cat("# VC AT NIV START PER SITE\n\n")
-    patients_info %>%
-        filter(niv == TRUE) %$%
+    cat("# VC AT NIV START PER SITE (2010-2022)\n\n")
+    patients.current.niv %$%
         q3_summary_table(site, vc_at_niv_interval, useNA = "ifany") %>%
         print()
     cat("\n\n")
 
-    patients_info %>%
-        filter(niv == TRUE) %>%
-        aov(vc_at_niv ~ site, data = .) %>%
+    cat("# ANOVA: VC AT NIV START PER SITE (2010-2022)\n\n")
+    aov(vc_at_niv ~ site, data = patients.current.niv) %>%
         summary() %>%
         print()
     sink()
 
-    patients_info %>%
-        filter(niv == TRUE) %>%
+    patients.current.niv %>%
+        drop_na(vc_at_niv) %>%
+        mutate(site = fct_drop(site)) %>%
         ggplot(aes(sample = vc_at_niv)) +
         geom_qq_line() +
         geom_qq() +
@@ -120,37 +120,35 @@ ext_interactive({
         theme(legend.position = "none")
     ggsave(file.path(q3_sitediff_output_dir, "age_at_onset-vs-year_of_diagnosis-per-site.png"))
 
-    patients_info.vc_at_niv %>%
+    patients_info.niv %>%
         drop_na(vc_at_niv) %>%
         ggplot(aes(vc_at_niv, fill = site)) +
-        geom_density(alpha = .5) +
+        geom_density(alpha = .3) +
         scale_fill_custom(drop = FALSE, breaks = str_c("Site ", c(1, 3, 4, 5, 7, 8, 9))) +
-        labs(title = "Vital Capacity at NIV (overall cohort)", x = "Vital capacity (%)", y = "Density", fill = NULL) +
+        labs(title = "Vital Capacity at NIV (Entire Cohort)", x = "Vital capacity (%)", y = "Density", fill = NULL) +
         theme_bw()
     ggsave(file.path(q3_sitediff_output_dir, "vc-at-niv-overall.density.png"))
 
-    patients_info.vc_at_niv %>%
+    patients_info.niv %>%
         drop_na(vc_at_niv) %>%
         ggplot(aes(x = site, y = vc_at_niv, fill = site)) +
         geom_boxplot() +
         scale_fill_custom(drop = FALSE) +
-        labs(title = "Vital Capacity at NIV (overall cohort)", x = NULL, y = "VC (%)") +
+        labs(title = "Vital Capacity at NIV (Entire Cohort)", x = NULL, y = "VC (%)") +
         theme_bw() +
         theme(legend.position = "none")
     ggsave(file.path(q3_sitediff_output_dir, "vc-at-niv-overall.boxplot.png"))
 
-    patients_info.vc_at_niv %>%
-        filter(year_of_diagnosis >= 2010) %>%
+    patients.current.niv %>%
         drop_na(vc_at_niv) %>%
         ggplot(aes(vc_at_niv, fill = site)) +
-        geom_density(alpha = .5) +
+        geom_density(alpha = .3) +
         scale_fill_custom(drop = FALSE, breaks = str_c("Site ", c(1, 5, 7:9))) +
         labs(title = "Vital Capacity at NIV (2010 – 2022)", x = "Vital capacity (%)", y = "Density", fill = NULL) +
         theme_bw()
     ggsave(file.path(q3_sitediff_output_dir, "vc-at-niv-after-2010.density.png"))
 
-    patients_info.vc_at_niv %>%
-        filter(year_of_diagnosis >= 2010) %>%
+    patients.current.niv %>%
         drop_na(vc_at_niv) %>%
         ggplot(aes(x = site, y = vc_at_niv, fill = site)) +
         geom_boxplot() +
@@ -159,6 +157,4 @@ ext_interactive({
         theme_bw() +
         theme(legend.position = "none")
     ggsave(file.path(q3_sitediff_output_dir, "vc-at-niv-after-2010.boxplot.png"))
-
-    q3_print_object(summary(vc_at_niv_across_sites.aov), file.path(q3_sitediff_output_dir, "vc-at-niv-across-sites.aov.txt"))
 })
