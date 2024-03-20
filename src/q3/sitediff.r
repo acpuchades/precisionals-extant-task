@@ -1,3 +1,4 @@
+library(broom)
 library(ggplot2)
 library(forcats)
 library(magrittr)
@@ -11,6 +12,91 @@ ext_source("src/ext/alsfrs.r")
 ext_source("src/ext/resp.r")
 ext_source("src/q3/impute.r")
 ext_source("src/q3/vc_niv.r")
+
+q3_cohort_exclude <- c(
+    "id", "site", "date_of_diagnosis", "diagnosis_period", "onset_sites", "altered_genes"
+)
+
+q3_cohort.ref <- q3_base %>%
+    q3_add_derived_variables() %>%
+    select(-all_of(q3_cohort_exclude))
+
+q3_cohort.target <- q3_base %>%
+    q3_add_derived_variables() %>%
+    filter(year_of_diagnosis >= 2010) %>%
+    select(-all_of(q3_cohort_exclude))
+
+q3_cohort.imputed <- q3_base.imputed %>%
+    filter(year_of_diagnosis >= 2010) %>%
+    q3_add_derived_variables() %>%
+    select(-all_of(q3_cohort_exclude))
+
+q3_cohort.diff <- bind_rows(
+    q3_cohort.ref %>% mutate(source = "ref"),
+    q3_cohort.target %>% mutate(source = "target"),
+    q3_cohort.target %>% mutate(source = "target.imputed")
+)
+
+q3_cohort_diff.num <- q3_cohort.diff %>%
+    select(source, where(is.numeric)) %>%
+    pivot_longer(-source)
+
+q3_cohort_diff.num_stats <- q3_cohort_diff.num %>%
+    summarize(
+        mean = mean(value, na.rm = TRUE),
+        median = median(value, na.rm = TRUE),
+        sd = sd(value, na.rm = TRUE),
+        iqr = IQR(value, na.rm = TRUE),
+        .by = c(source, name)
+    ) %>%
+    arrange(name)
+
+q3_cohort_diff.num.ref_vs_target <- q3_cohort_diff.num %>%
+    filter(source %in% c("ref", "target")) %>%
+    mutate(source.a = "ref", source.b = "target") %>%
+    reframe(t.test(value ~ source) %>% tidy(), .by = c(name, source.a, source.b))
+
+q3_cohort_diff.num.target_vs_imputed <- q3_cohort_diff.num %>%
+    filter(source %in% c("target", "target.imputed")) %>%
+    mutate(source.a = "target", source.b = "target.imputed") %>%
+    reframe(t.test(value ~ source) %>% tidy(), .by = c(name, source.a, source.b))
+
+q3_cohort_diff.num_tests <- bind_rows(
+    q3_cohort_diff.num.ref_vs_target,
+    q3_cohort_diff.num.target_vs_imputed
+) %>%
+    arrange(name, source.a, source.b)
+
+q3_cohort_diff.cat <- q3_cohort.diff %>%
+    select(source | !where(is.numeric)) %>%
+    mutate(across(everything(), as.character)) %>%
+    pivot_longer(-source)
+
+q3_cohort_diff.cat_stats <- q3_cohort_diff.cat %>%
+    summarize(n = n(), .by = c(source, name, value)) %>%
+    mutate(total = sum(n), .by = c(source, name)) %>%
+    arrange(name, value, source)
+
+q3_cohort_diff.cat.ref_vs_target <- q3_cohort_diff.cat %>%
+    filter(source %in% c("ref", "target")) %>%
+    mutate(source.a = "ref", source.b = "target") %>%
+    reframe(
+        chisq.test(table(source, value), correct = TRUE) %>% tidy(),
+        .by = c(name, source.a, source.b)
+    )
+
+q3_cohort_diff.cat.target_vs_imputed <- q3_cohort_diff.cat %>%
+    filter(source %in% c("target", "target.imputed")) %>%
+    mutate(source.a = "target", source.b = "target.imputed") %>%
+    reframe(
+        chisq.test(table(source, value), correct = TRUE) %>% tidy(),
+        .by = c(name, source.a, source.b)
+    )
+
+q3_cohort_diff.cat_tests <- bind_rows(
+    q3_cohort_diff.cat.ref_vs_target,
+    q3_cohort_diff.cat.target_vs_imputed,
+) %>% arrange(name)
 
 q3_survival_data <- q3_data.imputed %>%
     filter(year_of_diagnosis >= 2010) %>%
@@ -54,6 +140,13 @@ patients.current.niv <- filter(patients.current, niv == TRUE)
 ext_interactive({
     q3_sitediff_output_dir <- file.path(q3_output_root_dir, "sitediff")
     dir.create(q3_sitediff_output_dir, showWarnings = FALSE, recursive = TRUE)
+
+    write_xlsx(list(
+        "Numeric" = q3_cohort_diff.num_stats,
+        "Numeric Tests" = q3_cohort_diff.num_tests,
+        "Categorical" = q3_cohort_diff.cat_stats,
+        "Categorical Tests" = q3_cohort_diff.cat_tests
+    ), file.path(q3_sitediff_output_dir, "compared-cohorts.xlsx"))
 
     q3_print_object(onset_to_diagnosis.sitediff, file.path(q3_sitediff_output_dir, "onset-to-diagnosis.txt"))
     png(file.path(q3_sitediff_output_dir, "onset-to-diagnosis.png"), width = 1000, height = 1000)
