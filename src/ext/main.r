@@ -271,9 +271,38 @@ ext_main <- ext_main %>%
     )
 
 ext_main.anon <- ext_main %>%
-    mutate(site = factor(site, labels = str_c("Site ", 1:n_distinct(site))))
+    mutate(site = factor(site, labels = str_c("Site ", 1:n_distinct(site)))) %>%
+    arrange(site, id)
 
 ext_interactive({
     library(writexl)
-    write_xlsx(ext_main.anon, "output/entire-cohort.xlsx")
+
+    ext_main.anon %>% write_xlsx("output/entire-cohort.xlsx")
+
+    followup_times <- ext_main.anon %>%
+        transmute(
+            id, site,
+            vital_status,
+            calculated_age_from_date_of_transfer,
+            calculated_age_at_death,
+            age_at_followup_start = calculated_age_at_onset,
+            age_at_followup_end = coalesce(
+                calculated_age_at_death,
+                calculated_age_from_date_of_transfer
+            ),
+            followup_duration = age_at_followup_end - age_at_followup_start
+        )
+
+    write_xlsx(list(
+        "From onset" = followup_times %>%
+            summarize(
+                patient_years = sum(followup_duration, na.rm = TRUE),
+                .by = site
+            ) %>%
+            bind_rows(tibble(
+                site = "Total",
+                patient_years = sum(followup_times$followup_duration, na.rm = TRUE)
+            )),
+        "Per patient" = followup_times
+    ), "output/followup-times.xlsx")
 })
