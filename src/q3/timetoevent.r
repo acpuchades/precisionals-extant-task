@@ -537,7 +537,7 @@ if (file.exists(q3_output_data_path)) {
         ) %>%
         transmute(
             id, site, sex, baseline_vc_rel, delta_fs, riluzole_use,
-            bulbar_onset, spinal_onset, cognitive_onset, respiratory_onset,
+            bulbar_onset, spinal_onset, cognitive_onset, respiratory_onset, generalized_onset,
             age_at_onset = calculated_age_at_onset, clinical_phenotype,
             date_of_diagnosis, year_of_diagnosis,
             c9orf72_status, sod1_status, fus_status, tardbp_status,

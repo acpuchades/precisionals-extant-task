@@ -170,51 +170,59 @@ ext_main <- ext_main %>%
             as.integer(str_extract(year_year_and_month_of_birth, "(\\d{4})-\\d{2}")),
             year(date_of_birth + dyears(age_at_diagnosis))
         ),
-        bulbar_onset = diagnosis == "PBP" | site_of_onset %in% c(
-            "Bulbar", "Bulbaire", "Bulbar and Spinal",
-            "Bulbar and Spinal",
+        bulbar_onset = (diagnosis == "PBP") | site_of_onset %in% c(
+            "Bulbar", "Bulbaire",
             "Bulbar and Cognitive/Behavioural",
+            "Bulbar and Spinal", "Bulbar and Spinal",
             "Bulbar and Thoracic/Respiratory",
             "Cognitive/Behavioural and Bulbar",
-            "PBP", "Generalized", "Generalised"
+            "PBP"
         ),
         spinal_onset = site_of_onset %in% c(
             "Arms", "Cervical",
-            "Spinal", "Bulbar and Spinal",
-            "Spinal and Cognitive/Behavioural",
             "Cognitive/Behavioural and Spinal",
-            "Thoracic/Respiratory and Spinal",
-            "Membre supérieur distal Bilat",
+            "Flail-Arm", "Flail-Leg",
+            "Hemiplegic", "Lower limb",
             "Membre inférieur distal D",
-            "Membre supérieur distal G",
-            "Membre inférieur proximal D",
-            "Membre inférieur proximal Bilat",
-            "Membre inférieur distal Bilat",
             "Membre inférieur distal G",
-            "Membre supérieur distal D",
+            "Membre inférieur distal Bilat",
+            "Membre inférieur proximal D",
             "Membre inférieur proximal G",
+            "Membre inférieur proximal Bilat",
+            "Membre supérieur distal D",
+            "Membre supérieur distal G",
+            "Membre supérieur distal Bilat",
+            "Membre supérieur proximal D",
             "Membre supérieur proximal G",
             "Membre supérieur proximal Bilat",
-            "Membre supérieur proximal D",
-            "Neck", "Upper limb", "Lower limb",
-            "Flail-Leg", "Flail-Arm", "Hemiplegic",
-            "Generalized", "Generalised"
+            "Monomyelic", "Neck",
+            "Pseudopolyneuritic",
+            "Spinal", "Bulbar and Spinal",
+            "Spinal and Cognitive/Behavioural",
+            "Thoracic/Respiratory and Spinal",
+            "Trunk", "trunk", "Upper limb"
         ),
         respiratory_onset = site_of_onset %in% c(
             "Bulbar and Thoracic/Respiratory",
-            "Respiratory",
-            "Respiratoire",
+            "Respiratory", "Respiratoire",
+            "respiratory",
             "Thoracic/respiratory",
             "Thoracic/Respiratory",
             "Thoracic/Respiratory and Spinal"
         ),
-        cognitive_onset = diagnosis == "FTD" | site_of_onset %in% c(
+        cognitive_onset = (diagnosis == "FTD") | site_of_onset %in% c(
+            "Bulbar and Cognitive/Behavioural",
             "Cognitive",
             "Cognitive/Behavioural",
             "Cognitive/Behavioural and Bulbar",
             "Cognitive/Behavioural and Spinal",
             "Cognitive impairment",
             "FTD"
+        ),
+        generalized_onset = site_of_onset %in% c(
+            "Generalized",
+            "Generalised",
+            "Mixed Presentation"
         ),
         side_of_onset = case_when(
             side_of_onset == "Right" ~ "R",
@@ -264,3 +272,8 @@ ext_main <- ext_main %>%
 
 ext_main.anon <- ext_main %>%
     mutate(site = factor(site, labels = str_c("Site ", 1:n_distinct(site))))
+
+ext_interactive({
+    library(writexl)
+    write_xlsx(ext_main.anon, "output/entire-cohort.xlsx")
+})

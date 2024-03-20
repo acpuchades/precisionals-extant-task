@@ -104,11 +104,12 @@ q3_add_derived_variables <- function(df) {
                 cognitive_onset + respiratory_onset
         ),
         site_of_onset = q3_as_site_of_onset(case_when(
+            generalized_onset ~ "Generalized",
             onset_sites > 1 ~ "Generalized",
-            spinal_onset ~ "Spinal",
             bulbar_onset ~ "Bulbar",
+            spinal_onset ~ "Spinal",
+            cognitive_onset ~ "Cognitive",
             respiratory_onset ~ "Respiratory",
-            cognitive_onset ~ "Cognitive"
         )),
         altered_genes = (
             (c9orf72_status == "Positive") +

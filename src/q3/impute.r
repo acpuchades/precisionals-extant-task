@@ -21,7 +21,8 @@ q3_fix_imputed_types <- function(df) {
         bulbar_onset,
         spinal_onset,
         cognitive_onset,
-        respiratory_onset
+        respiratory_onset,
+        generalized_onset
     ), as.logical))
 }
 
@@ -111,6 +112,18 @@ ext_interactive({
         labs(title = "Cognitive onset vs Diagnostic delay: observed vs imputed")
     ggsave("output/q3/impute/mice-cognitive_onset-vs-diagnostic_delay.png")
 
+    ggmice(q3_base.mids, aes(as.logical(respiratory_onset), diagnostic_delay)) +
+        geom_violin() +
+        coord_flip() +
+        labs(title = "Respiratory onset vs Diagnostic delay: observed vs imputed")
+    ggsave("output/q3/impute/mice-respiratory_onset-vs-diagnostic_delay.png")
+
+    ggmice(q3_base.mids, aes(as.logical(generalized_onset), diagnostic_delay)) +
+        geom_violin() +
+        coord_flip() +
+        labs(title = "Generalized onset vs Diagnostic delay: observed vs imputed")
+    ggsave("output/q3/impute/mice-generalized_onset-vs-diagnostic_delay.png")
+
     ggmice(q3_base.mids, aes(clinical_phenotype, diagnostic_delay)) +
         geom_violin() +
         coord_flip() +
@@ -134,6 +147,18 @@ ext_interactive({
         coord_flip() +
         labs(title = "Cognitive onset vs DeltaFS: observed vs imputed")
     ggsave("output/q3/impute/mice-cognitive_onset-vs-delta_fs.png")
+
+    ggmice(q3_base.mids, aes(as.logical(respiratory_onset), delta_fs)) +
+        geom_violin() +
+        coord_flip() +
+        labs(title = "Respiratory onset vs DeltaFS: observed vs imputed")
+    ggsave("output/q3/impute/mice-respiratory_onset-vs-delta_fs.png")
+
+    ggmice(q3_base.mids, aes(as.logical(generalized_onset), delta_fs)) +
+        geom_violin() +
+        coord_flip() +
+        labs(title = "Generalized onset vs DeltaFS: observed vs imputed")
+    ggsave("output/q3/impute/mice-generalized_onset-vs-delta_fs.png")
 
     ggmice(q3_base.mids, aes(clinical_phenotype, delta_fs)) +
         geom_violin() +
