@@ -53,7 +53,7 @@ q3_event_labels <- list(
 )
 
 q3_group_labels <- list(
-    site = "site",
+    site = "cohort",
     sex = "sex",
     age_category = "age at onset",
     diagnosis_period = "diagnosis period",
@@ -81,6 +81,14 @@ q3_plots <- list(
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
     ),
     list(
+        risk_tables = TRUE,
+        origins = "birth",
+        events = "onset",
+        event_required = TRUE,
+        censor_after = dyears(100),
+        output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
+    ),
+    list(
         origins = "birth",
         events = "onset",
         event_required = TRUE,
@@ -89,11 +97,28 @@ q3_plots <- list(
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     ),
     list(
+        risk_tables = TRUE,
+        origins = "birth",
+        events = "onset",
+        event_required = TRUE,
+        censor_after = dyears(100),
+        groups = names(q3_group_labels),
+        output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
+    ),
+    list(
         origins = "onset",
         events = "diagnosis",
         event_required = TRUE,
         censor_after = dyears(10),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
+    ),
+    list(
+        risk_tables = TRUE,
+        origins = "onset",
+        events = "diagnosis",
+        event_required = TRUE,
+        censor_after = dyears(10),
+        output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "onset",
@@ -104,10 +129,26 @@ q3_plots <- list(
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     ),
     list(
+        risk_tables = TRUE,
+        origins = "onset",
+        events = "diagnosis",
+        event_required = TRUE,
+        censor_after = dyears(10),
+        groups = names(q3_group_labels),
+        output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
+    ),
+    list(
         origins = c("onset", "diagnosis"),
         events = q3_clinical_milestones,
         censor_after = dyears(10),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
+    ),
+    list(
+        risk_tables = TRUE,
+        origins = c("onset", "diagnosis"),
+        events = q3_clinical_milestones,
+        censor_after = dyears(10),
+        output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = c("onset", "diagnosis"),
@@ -115,6 +156,14 @@ q3_plots <- list(
         groups = names(q3_group_labels),
         censor_after = dyears(10),
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
+    ),
+    list(
+        risk_tables = TRUE,
+        origins = c("onset", "diagnosis"),
+        events = q3_clinical_milestones,
+        groups = names(q3_group_labels),
+        censor_after = dyears(10),
+        output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
     )
 )
 
@@ -140,8 +189,6 @@ q3_trim_survival_groups <- function(data, group) {
             "LMN-Predominant", "UMN-Predominant",
             "Flail-Arm", "Flail-Leg"
         ))
-    } else if (group == "site_of_onset") {
-        data %>% filter(site_of_onset != "Multiple")
     } else if (group == "diagnosis_period") {
         data %>% filter(diagnosis_period %in% c(
             "1990-1999", "2000-2009", "2010-2019", "2020-2022"
@@ -151,7 +198,7 @@ q3_trim_survival_groups <- function(data, group) {
     }
 }
 
-q3_analyze_survival <- function(data, origin, event, group = NULL, event_required = FALSE, censor_after = NULL, unit = "years") {
+q3_analyze_survival <- function(data, origin, event, group = NULL, event_required = FALSE, censor_after = NULL, risk_tables = FALSE, unit = "years") {
     origin_lbl <- q3_origin_labels[[origin]]
     event_lbl <- q3_event_labels[[event]]
     title <- q3_str_to_title(event_lbl)
@@ -188,6 +235,10 @@ q3_analyze_survival <- function(data, origin, event, group = NULL, event_require
         add_confidence_interval() +
         labs(title = title, x = xlab, y = NULL)
 
+    if (risk_tables) {
+        km_plot <- km_plot + add_risktable()
+    }
+
     list("fit" = km_fit, "plot" = km_plot)
 }
 
@@ -214,9 +265,6 @@ q3_data <- q3_data %>% mutate(across(
 progress_bar$tick(0)
 for (p in q3_plots) {
     for (origin in p$origins) {
-        epoch_unit <- p$unit %||% "years"
-        event_required <- p$event_required %||% FALSE
-
         for (event in p$events) {
             if (!q3_is_valid_event_from_origin(event, origin)) {
                 skip_groups <- length(p$groups %||% list(NULL))
@@ -228,8 +276,10 @@ for (p in q3_plots) {
             for (group in p$groups %||% list(NULL)) {
                 results <- q3_analyze_survival(
                     q3_data, origin, event, group,
-                    unit = epoch_unit, event_required = event_required,
-                    censor_after = p$censor_after
+                    censor_after = p$censor_after,
+                    unit = p$unit %||% "years",
+                    risk_tables = p$risk_tables %||% FALSE,
+                    event_required = p$event_required %||% FALSE
                 )
                 output_path <- file.path("output", "q3", str_glue(p$output_name))
                 q3_save_plot(results$plot, output_path %>% with_ext(q3_survplots_output_format))
