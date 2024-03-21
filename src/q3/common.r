@@ -1,11 +1,13 @@
 library(dplyr)
 library(forcats)
+library(ggplot2)
 library(ggsci)
 library(stringr)
 
 source("src/ext/common.r")
 
 ext_source("src/ext/alsfrs.r")
+ext_source("src/q3/helpers.r")
 
 q3_output_root_dir <- "output/q3"
 
@@ -42,6 +44,7 @@ q3_is_valid_event_from_origin <- function(event, origin) {
         event == origin ~ FALSE,
         event != origin ~ case_match(
             origin,
+            "birth" ~ event == "onset",
             "onset" ~ event != "birth",
             "diagnosis" ~ !(event %in% c("birth", "onset")),
             .default = TRUE
@@ -67,7 +70,11 @@ q3_as_survival_data <- function(data, unit = "years", censor_after = NULL) {
     data
 }
 
-q3_select_event <- function(data, origin, event, epoch = dmonths(1), censor_after_epochs = NULL) {
+q3_select_event <- function(x, ...) {
+    UseMethod("q3_select_event", x)
+}
+
+q3_select_event.default <- function(data, origin, event, epoch = dmonths(1), censor_after_epochs = NULL) {
     data %<>%
         filter(.data$origin == .env$origin, .data$event == .env$event) %>%
         select(-origin, -event, -time_to_event, -time_to_loss)
@@ -80,6 +87,27 @@ q3_select_event <- function(data, origin, event, epoch = dmonths(1), censor_afte
     }
 
     data
+}
+
+q3_select_event.mids <- function(mids, origin, event, event_required = FALSE, censor_after_epochs = NULL) {
+    data <- complete(mids, action = "long", include = TRUE) %>%
+        mutate(
+            time = .data[[str_glue("time_{origin}_{event}")]],
+            status = .data[[str_glue("status_{origin}_{event}")]]
+        )
+
+    if (!is.null(censor_after_epochs)) {
+        data <- data %>% mutate(
+            status = as.numeric((status == 1) & (time <= censor_after_epochs)),
+            time = pmin(time, censor_after_epochs)
+        )
+    }
+
+    if (event_required) {
+        data <- filter(data, status == 1)
+    }
+
+    as.mids(data)
 }
 
 q3_show_progress <- function(m, f) {

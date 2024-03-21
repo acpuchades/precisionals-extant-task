@@ -7,16 +7,19 @@ suppressPackageStartupMessages({
     library(rlang)
     library(stringr)
     library(tidyr)
+    library(writexl)
     library(xfun)
+    library(visdat)
 })
 
 source("src/ext/common.r")
 
 ext_source("src/q3/common.r")
 
-q3_output_data_path <- file.path(q3_output_root_dir, "timetoevent.rds")
-q3_output_t2e_data_path <- file.path(q3_output_root_dir, "timetoevent_t2e.rds")
-q3_output_base_data_path <- file.path(q3_output_root_dir, "timetoevent_base.rds")
+q3_output_data_path <- file.path(q3_output_root_dir, "data.rds")
+q3_output_data_w_path <- file.path(q3_output_root_dir, "data_w.rds")
+q3_output_base_data_path <- file.path(q3_output_root_dir, "base.rds")
+q3_output_t2e_data_path <- file.path(q3_output_root_dir, "event-times.rds")
 
 q3_as_causal_gene <- function(x) {
     factor(x, levels = c(
@@ -33,8 +36,9 @@ q3_as_site_of_onset <- function(x) {
 if (file.exists(q3_output_data_path)) {
     q3_show_progress("Loading cached time to event data", {
         q3_data <- readRDS(q3_output_data_path)
+        q3_data_w <- readRDS(q3_output_data_w_path)
         q3_base <- readRDS(q3_output_base_data_path)
-        q3_time_to_events <- readRDS(q3_output_t2e_data_path)
+        q3_event_times <- readRDS(q3_output_t2e_data_path)
     })
 } else {
     q3_show_progress("Loading the dataset", suppressMessages({
@@ -296,7 +300,7 @@ if (file.exists(q3_output_data_path)) {
     # NOTE: explicit casts are necessary because pmin seems to get confused
     #       when mixing NA days (POSIXct) and dyears(x) (lubridate) types.
     q3_show_progress("Calculating time to events", {
-        q3_time_to_events <- ext_main %>%
+        q3_event_times <- ext_main %>%
             left_join(q3_time_to_kings, by = "id") %>%
             left_join(q3_time_to_mitos, by = "id") %>%
             left_join(q3_time_to_walking_support, by = "id") %>%
@@ -494,40 +498,6 @@ if (file.exists(q3_output_data_path)) {
             )
     })
 
-    q3_time_to_niv <- ext_main %>%
-        select(id, date_of_birth, date_of_onset, age_at_onset) %>%
-        left_join(
-            q3_time_to_events %>%
-                q3_select_event("onset", "niv") %>%
-                filter(status == "event") %>%
-                select(id, time_to_niv = "duration"),
-            by = "id"
-        ) %>%
-        transmute(
-            id,
-            time_from_onset = time_to_niv,
-            date_of_niv = coalesce(
-                date_of_onset + time_to_niv,
-                date_of_birth + dyears(age_at_onset) + time_to_niv
-            ),
-            age_at_niv = coalesce(
-                age_at_onset + time_to_niv / dyears(1),
-                as.duration(date_of_onset + time_to_niv - date_of_birth) / dyears(1)
-            )
-        )
-
-    q3_vc_at_niv_start <- q3_time_to_niv %>%
-        rename(time_from_onset_to_niv = "time_from_onset") %>%
-        left_join(
-            q3_vc_assessments %>%
-                rename(time_from_onset_to_assessment = "time_from_onset") %>%
-                select(id, time_from_onset_to_assessment, vc_abs, vc_rel),
-            by = "id"
-        ) %>%
-        filter(time_from_onset_to_assessment <= time_from_onset_to_niv) %>%
-        slice_min(time_from_onset_to_niv - time_from_onset_to_assessment, by = id, with_ties = FALSE) %>%
-        select(id, vc_at_niv_abs = "vc_abs", vc_at_niv_rel = "vc_rel")
-
     q3_base <- ext_main.anon %>%
         left_join(ext_baseline, by = "id") %>%
         left_join(
@@ -549,12 +519,52 @@ if (file.exists(q3_output_data_path)) {
 
     q3_data <- q3_base %>%
         q3_add_derived_variables() %>%
-        left_join(q3_time_to_events, by = "id")
+        left_join(q3_event_times, by = "id")
+
+    q3_data_w <- q3_data %>%
+        select(-c(time_to_event, time_to_loss)) %>%
+        drop_na(origin, event) %>%
+        mutate(
+            event = str_glue("{origin}_{event}"),
+            status = as.integer(status == "event"),
+            time = duration / dmonths(1),
+            .keep = "unused"
+        ) %>%
+        group_by(event) %>%
+        mutate(
+            cumhaz = nelsonaalen(pick(everything()), time, status)
+        ) %>%
+        ungroup() %>%
+        pivot_wider(
+            id_cols = c(id, site),
+            names_from = event,
+            values_from = c(status, time, cumhaz),
+            unused_fn = first
+        )
 
     q3_show_progress("Exporting results", {
         dir.create(q3_output_root_dir, recursive = TRUE, showWarnings = FALSE)
-        q3_time_to_events %>% saveRDS(q3_output_t2e_data_path)
         q3_base %>% saveRDS(q3_output_base_data_path)
         q3_data %>% saveRDS(q3_output_data_path)
+        q3_data_w %>% saveRDS(q3_output_data_w_path)
+        q3_event_times %>% saveRDS(q3_output_t2e_data_path)
     })
 }
+
+q3_base_recent <- filter(q3_base, year_of_diagnosis >= 2010)
+q3_data_recent <- filter(q3_data, year_of_diagnosis >= 2010)
+q3_data_recent_w <- filter(q3_data_w, year_of_diagnosis >= 2010)
+
+ext_interactive({
+    vis_dat(q3_base, facet = site)
+    ggsave(file.path(q3_output_root_dir, "missing-per-site-global.png"), bg = "white", width = 12, height = 7, dpi = 300)
+
+    vis_miss(q3_base) + theme(plot.margin = margin(0, 2, 0, 0, "cm"))
+    ggsave(file.path(q3_output_root_dir, "missing-overall-global.png"), bg = "white", width = 10, height = 7, dpi = 300)
+
+    vis_dat(q3_base_recent, facet = site)
+    ggsave(file.path(q3_output_root_dir, "missing-per-site-recent.png"), bg = "white", width = 12, height = 7, dpi = 300)
+
+    vis_miss(q3_base_recent) + theme(plot.margin = margin(0, 2, 0, 0, "cm"))
+    ggsave(file.path(q3_output_root_dir, "missing-overall-recent.png"), bg = "white", width = 10, height = 7, dpi = 300)
+})
