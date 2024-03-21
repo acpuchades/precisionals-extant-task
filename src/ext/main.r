@@ -1,5 +1,6 @@
 suppressPackageStartupMessages({
     library(lubridate)
+    library(rlang)
 })
 
 source("src/ext/common.r")
@@ -169,14 +170,14 @@ ext_main <- ext_main %>%
             year(date_of_diagnosis),
             year(date_of_birth + dyears(age_at_diagnosis))
         ),
-        bulbar_onset = (diagnosis == "PBP") | site_of_onset %in% c(
+        bulbar_onset = (diagnosis == "PBP") %|% (site_of_onset %in% c(
             "Bulbar", "Bulbaire",
             "Bulbar and Cognitive/Behavioural",
             "Bulbar and Spinal", "Bulbar and Spinal",
             "Bulbar and Thoracic/Respiratory",
             "Cognitive/Behavioural and Bulbar",
             "PBP"
-        ),
+        )),
         spinal_onset = site_of_onset %in% c(
             "Arms", "Cervical",
             "Cognitive/Behavioural and Spinal",
@@ -209,7 +210,7 @@ ext_main <- ext_main %>%
             "Thoracic/Respiratory",
             "Thoracic/Respiratory and Spinal"
         ),
-        cognitive_onset = (diagnosis == "FTD") | site_of_onset %in% c(
+        cognitive_onset = (diagnosis == "FTD") %|% (site_of_onset %in% c(
             "Bulbar and Cognitive/Behavioural",
             "Cognitive",
             "Cognitive/Behavioural",
@@ -217,7 +218,7 @@ ext_main <- ext_main %>%
             "Cognitive/Behavioural and Spinal",
             "Cognitive impairment",
             "FTD"
-        ),
+        )),
         generalized_onset = site_of_onset %in% c(
             "Generalized",
             "Generalised",
