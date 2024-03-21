@@ -32,13 +32,13 @@ q3_fix_imputed_fields <- function(df) {
 }
 
 q3_impute_data <- function(data, method = q3_impute_method, m = q3_impute_m, mincor = q3_impute_mincor, minpuc = q3_impute_minpuc, ...) {
-  input <- data %>% select(-c(
-    starts_with("cumhaz_onset_") & !matches("cumhaz_onset_diagnosis"),
-    starts_with("date_"), starts_with(c("time", "status"))
+  input <- data %>% select(-(
+    starts_with(c("date_", "time_", "status_")) |
+      (starts_with("cumhaz_onset_") & !matches("cumhaz_onset_diagnosis"))
   ))
 
-  predmat <- quickpred(input, mincor = mincor)
-  futuremice(input, predictorMatrix = predmat, method = method, m = m, mincor = mincor, minpuc = minpuc, ...) %>%
+  predmat <- quickpred(input, mincor = mincor, minpuc = minpuc)
+  mice(input, method = method, m = m, predictorMatrix = predmat, ...) %>%
     complete(action = "long", include = TRUE) %>%
     left_join(
       data %>%
