@@ -141,6 +141,8 @@ ext_interactive({
     q3_sitediff_output_dir <- file.path(q3_output_root_dir, "sitediff")
     dir.create(q3_sitediff_output_dir, showWarnings = FALSE, recursive = TRUE)
 
+    write_xlsx(q3_cohort.diff, file.path(q3_sitediff_output_dir, "cohorts-data.xlsx"))
+
     write_xlsx(list(
         "Numeric" = q3_cohort_diff.num_stats,
         "Numeric Tests" = q3_cohort_diff.num_tests,
@@ -217,7 +219,7 @@ ext_interactive({
         drop_na(vc_at_niv) %>%
         ggplot(aes(vc_at_niv, fill = site)) +
         geom_density(alpha = .3) +
-        scale_fill_custom(drop = FALSE, breaks = str_c("Site ", c(1, 3, 4, 5, 7, 8, 9))) +
+        scale_fill_custom(drop = FALSE, breaks = str_c("Cohort ", c(1, 3, 4, 5, 7, 8, 9))) +
         labs(title = "Vital Capacity at NIV (Entire Cohort)", x = "Vital capacity (%)", y = "Density", fill = NULL) +
         theme_bw()
     ggsave(file.path(q3_sitediff_output_dir, "vc-at-niv-overall.density.png"))
@@ -236,7 +238,7 @@ ext_interactive({
         drop_na(vc_at_niv) %>%
         ggplot(aes(vc_at_niv, fill = site)) +
         geom_density(alpha = .3) +
-        scale_fill_custom(drop = FALSE, breaks = str_c("Site ", c(1, 5, 7:9))) +
+        scale_fill_custom(drop = FALSE, breaks = str_c("Cohort ", c(1, 5, 7:9))) +
         labs(title = "Vital Capacity at NIV (2010 – 2022)", x = "Vital capacity (%)", y = "Density", fill = NULL) +
         theme_bw()
     ggsave(file.path(q3_sitediff_output_dir, "vc-at-niv-after-2010.density.png"))

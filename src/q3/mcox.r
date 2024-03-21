@@ -25,6 +25,11 @@ png(file.path(q3_mcox_output_dir, "birth-to-onset.png"), width = 1800, height = 
 birth_to_onset.zph <- q3_plot_coxph(birth_to_onset.mcox)
 dev.off()
 
+q3_print_object(list(
+    `Multilevel Cox Regression (Diagnosis -> Walking support)` = birth_to_onset.mcox,
+    `Cox Proportional Hazard (Diagnosis -> Walking support)` = birth_to_onset.zph
+), file.path(q3_mcox_output_dir, "birth-to-onset.txt"))
+
 onset_to_diagnosis.mcox <- coxme(
     Surv(time, status) ~
         site_of_onset + sex + age_at_onset + baseline_vc_rel + I(delta_fs^(1 / 3)) +
