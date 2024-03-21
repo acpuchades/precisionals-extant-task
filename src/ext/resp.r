@@ -47,4 +47,4 @@ ext_resp <- ext_load_data(
     )
 
 ext_resp.anon <- ext_resp %>%
-    mutate(site = factor(site, labels = str_c("Site ", 1:n_distinct(site))))
+    mutate(site = factor(site, labels = str_c("Cohort ", 1:n_distinct(site))))
