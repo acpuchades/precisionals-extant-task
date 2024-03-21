@@ -12,10 +12,17 @@ ext_source("src/q3/timetoevent.r")
 q3_impute_m <- 20
 q3_impute_minpuc <- 0
 q3_impute_mincor <- .1
-q3_impute_method <- "cart"
+q3_impute_method <- NULL
 
-q3_impute_dir_name <- str_glue("{q3_impute_method}-m{q3_impute_m}-mincor{q3_impute_mincor}-minpuc{q3_impute_minpuc}")
-q3_impute_root_dir <- file.path(q3_output_root_dir, "impute2", q3_impute_dir_name)
+q3_impute_model_name <- str_c(
+  coalesce(q3_impute_method, "default"),
+  str_c("m", q3_impute_m),
+  str_c("mincor", q3_impute_mincor),
+  str_c("minpuc", q3_impute_minpuc),
+  sep = "-"
+)
+
+q3_impute_root_dir <- file.path(q3_output_root_dir, "impute2", q3_impute_model_name)
 
 q3_output_imputed_data_path <- file.path(q3_impute_root_dir, "global_imp.rds")
 q3_output_imputed_data_recent_path <- file.path(q3_impute_root_dir, "recent_imp.rds")
@@ -32,21 +39,9 @@ q3_fix_imputed_fields <- function(df) {
 }
 
 q3_impute_data <- function(data, method = q3_impute_method, m = q3_impute_m, mincor = q3_impute_mincor, minpuc = q3_impute_minpuc, ...) {
-  input <- data %>% select(-(
-    starts_with(c("date_", "time_", "status_")) |
-      (starts_with("cumhaz_onset_") & !matches("cumhaz_onset_diagnosis"))
-  ))
-
-  predmat <- quickpred(input, mincor = mincor, minpuc = minpuc)
-  mice(input, method = method, m = m, predictorMatrix = predmat, ...) %>%
-    complete(action = "long", include = TRUE) %>%
-    left_join(
-      data %>%
-        select(id, site, starts_with("date_"), starts_with(c("time", "status"))),
-      by = c("id", "site")
-    ) %>%
-    q3_fix_imputed_fields() %>%
-    as.mids()
+  exclude_cols <- colnames(select(data, starts_with(c("date_", "time_", "status_")), starts_with("cumhaz_onset_") & !matches("cumhaz_onset_diagnosis")))
+  predmat <- quickpred(data, mincor = mincor, minpuc = minpuc, exclude = exclude_cols)
+  futuremice(data, method = method, m = m, predictorMatrix = predmat, ...)
 }
 
 q3_save_impute_diagnostics <- function(mids, prefix) {
@@ -142,7 +137,13 @@ q3_save_impute_diagnostics <- function(mids, prefix) {
     labs(title = "Clinical phenotype vs DeltaFS: observed vs imputed")
   ggsave(str_c(prefix, "clinical_phenotype-vs-delta_fs.png"))
 
-  plot_pred(mids$predictorMatrix, label = FALSE) +
+  pmat <- mids$predictorMatrix
+  colnames <- colnames(pmat)
+  exclude_cols <- c(
+    str_starts(colnames, "time_") | str_starts(colnames, "status_")
+  )
+
+  plot_pred(pmat[!exclude_cols, !exclude_cols], label = FALSE) +
     theme(axis.text.x = element_text(angle = 90, hjust = 0))
   ggsave(str_c(prefix, "predictor-matrix.png"), bg = "white")
 }
@@ -153,6 +154,7 @@ if (file.exists(q3_output_imputed_data_path) & file.exists(q3_output_imputed_dat
     q3_data_recent_w.mids <- readRDS(q3_output_imputed_data_recent_path)
   })
 } else {
+  set.seed(1234)
   dir.create(q3_impute_root_dir, showWarnings = FALSE, recursive = TRUE)
 
   q3_show_progress("Imputing data for the entire cohort", {

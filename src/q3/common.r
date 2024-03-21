@@ -91,9 +91,9 @@ q3_select_event.default <- function(data, origin, event, epoch = dmonths(1), cen
 
 q3_select_event.mids <- function(mids, origin, event, event_required = FALSE, censor_after_epochs = NULL) {
     data <- complete(mids, action = "long", include = TRUE) %>%
-        mutate(
-            time = .data[[str_glue("time_{origin}_{event}")]],
-            status = .data[[str_glue("status_{origin}_{event}")]]
+        rename(
+            time = str_glue("time_{origin}_{event}"),
+            status = str_glue("status_{origin}_{event}")
         )
 
     if (!is.null(censor_after_epochs)) {
@@ -104,7 +104,7 @@ q3_select_event.mids <- function(mids, origin, event, event_required = FALSE, ce
     }
 
     if (event_required) {
-        data <- filter(data, status == 1)
+        data <- mutate(data, status = na_if(status, status != 1))
     }
 
     as.mids(data)
