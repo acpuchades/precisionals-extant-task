@@ -507,9 +507,13 @@ if (file.exists(q3_output_data_path)) {
         ) %>%
         transmute(
             id, site, sex, baseline_vc_rel, delta_fs, riluzole_use,
+            baseline_bulbar_alsfrs = baseline_bulbar_score,
+            baseline_fine_motor_alsfrs = baseline_fine_motor_score,
+            baseline_gross_motor_alsfrs = baseline_gross_motor_score,
+            baseline_respiratory_alsfrs = baseline_respiratory_score,
+            baseline_total_alsfrs = baseline_total_score,
             bulbar_onset, spinal_onset, cognitive_onset, respiratory_onset, generalized_onset,
-            age_at_onset = calculated_age_at_onset, clinical_phenotype,
-            date_of_diagnosis, year_of_diagnosis,
+            age_at_onset = calculated_age_at_onset, clinical_phenotype, year_of_diagnosis,
             c9orf72_status, sod1_status, fus_status, tardbp_status,
             diagnostic_delay = coalesce(
                 (age_at_diagnosis - age_at_onset) * 12,
