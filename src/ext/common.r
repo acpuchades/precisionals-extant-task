@@ -7,23 +7,21 @@ suppressPackageStartupMessages({
 
 ext_source <- function(path) {
     if (!exists("ext_source_level__")) {
-        ext_source_level__ <- 0
-        ext_source_interactive__ <- FALSE
+        ext_source_level__ <<- 1
     } else {
-        ext_source_level__ <- ext_source_level__ + 1
+        ext_source_level__ <<- ext_source_level__ + 1
     }
 
     source(path)
 
-    ext_source_level__ <- ext_source_level__ - 1
-    if (ext_source_level__ == 0) {
+    ext_source_level__ <<- ext_source_level__ - 1
+    if (ext_source_level__ <= 0) {
         rm(ext_source_level__)
-        rm(ext_source_interactive__)
     }
 }
 
 ext_interactive <- function(f) {
-    if (!exists("ext_source_interactive__") || ext_source_interactive__ == TRUE) {
+    if (!exists("ext_source_level__") || ext_source_level__ == 0) {
         eval(f)
     }
 }
