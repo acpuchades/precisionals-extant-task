@@ -294,14 +294,15 @@ ext_interactive({
 
     write_xlsx(list(
         "From onset" = followup_times %>%
+            bind_rows(followup_times %>% mutate(site = "Total")) %>%
             summarize(
-                patient_years = sum(followup_duration, na.rm = TRUE),
+                total_patient_years = sum(followup_duration, na.rm = TRUE),
+                mean = mean(followup_duration, na.rm = TRUE),
+                median = median(followup_duration, na.rm = TRUE),
+                sd = sd(followup_duration, na.rm = TRUE),
+                iqr = IQR(followup_duration, na.rm = TRUE),
                 .by = site
-            ) %>%
-            bind_rows(tibble(
-                site = "Total",
-                patient_years = sum(followup_times$followup_duration, na.rm = TRUE)
-            )),
+            ),
         "Per patient" = followup_times
     ), "output/followup-times.xlsx")
 })
