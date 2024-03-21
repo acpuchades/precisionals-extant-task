@@ -167,7 +167,6 @@ ext_main <- ext_main %>%
         ),
         year_of_diagnosis = coalesce(
             year(date_of_diagnosis),
-            as.integer(str_extract(year_year_and_month_of_birth, "(\\d{4})-\\d{2}")),
             year(date_of_birth + dyears(age_at_diagnosis))
         ),
         bulbar_onset = (diagnosis == "PBP") | site_of_onset %in% c(
@@ -271,7 +270,7 @@ ext_main <- ext_main %>%
     )
 
 ext_main.anon <- ext_main %>%
-    mutate(site = factor(site, labels = str_c("Site ", 1:n_distinct(site)))) %>%
+    mutate(site = factor(site, labels = str_c("Cohort ", 1:n_distinct(site)))) %>%
     arrange(site, id)
 
 ext_interactive({
