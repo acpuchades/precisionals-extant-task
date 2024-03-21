@@ -206,7 +206,27 @@ ext_alsfrs <- suppressWarnings(
     ) %>%
     select(-date_of_birth) %>%
     filter(!is.na(date_of_assessment) | !is.na(age_at_assessment)) %>%
-    ext_alsfrs_clean()
+    ext_alsfrs_clean() %>%
+    mutate(
+        bulbar_score = q1_speech + q2_salivation + q3_swallowing,
+        fine_motor_score = q4_handwriting + q6_dressing_and_hygiene + if_else(
+            q5a_cutting_food_without_gastrostomy == q5b_cutting_food_with_gastrostomy,
+            q5a_cutting_food_without_gastrostomy,
+            coalesce(
+                q5x_cutting_food_with_gastrostomy_status_unknown,
+                q5a_cutting_food_without_gastrostomy,
+                q5b_cutting_food_with_gastrostomy
+            )
+        ),
+        gross_motor_score = q7_turning_in_bed + q8_walking + q9_climbing_stairs,
+        respiratory_score = q10_dyspnea + q11_orthopnea + q12_respiratory_insufficiency,
+        across(c(bulbar_score, gross_motor_score, fine_motor_score, respiratory_score), ~ {
+            coalesce(.x, {
+                other_scores_total <- rowSums(across(bulbar_score:respiratory_score), na.rm = TRUE)
+                na_if(total_score - other_scores_total, (total_score - other_scores_total) > 4)
+            })
+        })
+    )
 
 ext_baseline <- ext_main %>%
     select(id, date_of_birth, date_of_onset, age_at_onset) %>%
@@ -227,6 +247,11 @@ ext_baseline <- ext_main %>%
             age_at_assessment,
             (date_of_baseline - date_of_birth) / dyears(1)
         ),
+        baseline_bulbar_score = bulbar_score,
+        baseline_fine_motor_score = fine_motor_score,
+        baseline_gross_motor_score = gross_motor_score,
+        baseline_respiratory_score = respiratory_score,
+        baseline_total_score = total_score,
         delta_fs = if_else(
             months_from_onset >= 6,
             (48 - total_score) / months_from_onset,
