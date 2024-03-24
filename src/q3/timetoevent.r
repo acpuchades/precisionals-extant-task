@@ -556,22 +556,22 @@ if (!exists("q3_data") || !exists("q3_data_w")) {
             q3_events %>% saveRDS(q3_timetoevent_events_data_path)
         })
     }
-
-    q3_base_recent <- filter(q3_base, year_of_diagnosis >= 2010)
-    q3_data_recent <- filter(q3_data, year_of_diagnosis >= 2010)
-    q3_data_recent_w <- filter(q3_data_w, year_of_diagnosis >= 2010)
 }
+
+q3_base_recent <- filter(q3_base, year_of_diagnosis >= 2010)
+q3_data_recent <- filter(q3_data, year_of_diagnosis >= 2010)
+q3_data_recent_w <- filter(q3_data_w, year_of_diagnosis >= 2010)
 
 ext_interactive({
     vis_dat(q3_base, facet = site) + labs(title = "Entire Cohort") + theme(plot.title = element_text(hjust = 0.5))
     ggsave(file.path(q3_output_root_dir, "missing-per-site-global.png"), bg = "white", width = 12, height = 8, dpi = 300)
 
     vis_miss(q3_base) + labs(title = "Entire Cohort") + theme(plot.title = element_text(hjust = 0.5), plot.margin = margin(1, 2.5, 1, .5, "cm"))
-    ggsave(file.path(q3_output_root_dir, "missing-overall-global.png"), bg = "white", width = 10, height = 8, dpi = 300)
+    ggsave(file.path(q3_output_root_dir, "missing-overview-global.png"), bg = "white", width = 10, height = 8, dpi = 300)
 
     vis_dat(q3_base_recent, facet = site) + labs(title = "Patients diagnosed in 2010-2022") + theme(plot.title = element_text(hjust = 0.5))
     ggsave(file.path(q3_output_root_dir, "missing-per-site-recent.png"), bg = "white", width = 12, height = 8, dpi = 300)
 
     vis_miss(q3_base_recent) + labs(title = "Patients diagnosed in 2010-2022") + theme(plot.title = element_text(hjust = 0.5), plot.margin = margin(1, 2.5, 1, .5, "cm"))
-    ggsave(file.path(q3_output_root_dir, "missing-overall-recent.png"), bg = "white", width = 10, height = 8, dpi = 300)
+    ggsave(file.path(q3_output_root_dir, "missing-overview-recent.png"), bg = "white", width = 10, height = 8, dpi = 300)
 })
