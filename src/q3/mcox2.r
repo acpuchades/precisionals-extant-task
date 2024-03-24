@@ -12,7 +12,7 @@ q3_mcox_output_dir <- file.path(q3_output_root_dir, "mcox2")
 dir.create(q3_mcox_output_dir, showWarnings = FALSE, recursive = TRUE)
 
 q3_birth_onset.mcox <- with(
-  q3_select_event(q3_data_w.mids, "birth", "onset", censor_after_epochs = 100 * 12, event_required = TRUE),
+  q3_select_event(q3_data_recent_w.mids, "birth", "onset", censor_after_epochs = 100 * 12, event_required = TRUE),
   coxme(Surv(time, status) ~
     sex + site_of_onset + c9orf72_status + sod1_status + fus_status + tardbp_status + (1 | site))
 )
@@ -27,7 +27,7 @@ write_xlsx(
 )
 
 q3_onset_diagnosis.mcox <- with(
-  q3_select_event(q3_data_w.mids, "onset", "diagnosis", censor_after_epochs = 10 * 12, event_required = TRUE),
+  q3_select_event(q3_data_recent_w.mids, "onset", "diagnosis", censor_after_epochs = 10 * 12, event_required = TRUE),
   coxme(Surv(time, status) ~
     site_of_onset + sex + age_at_onset + baseline_vc_rel + I(delta_fs^(1 / 3)) +
     c9orf72_status + sod1_status + fus_status + tardbp_status +
@@ -44,7 +44,7 @@ write_xlsx(
 )
 
 q3_diagnosis_respiratory_onset.mcox <- with(
-  q3_select_event(q3_data_w.mids, "diagnosis", "respiratory_onset", censor_after_epochs = 10 * 12),
+  q3_select_event(q3_data_recent_w.mids, "diagnosis", "respiratory_onset", censor_after_epochs = 10 * 12),
   coxme(Surv(time, status) ~
     site_of_onset + sex + age_at_onset + baseline_vc_rel +
     I(delta_fs^(1 / 3)) + I(diagnostic_delay^(1 / 3)) +
@@ -62,7 +62,7 @@ write_xlsx(
 )
 
 q3_diagnosis_walking_support.mcox <- with(
-  q3_select_event(q3_data_w.mids, "diagnosis", "walking_support", censor_after_epochs = 10 * 12),
+  q3_select_event(q3_data_recent_w.mids, "diagnosis", "walking_support", censor_after_epochs = 10 * 12),
   coxme(Surv(time, status) ~
     site_of_onset + sex + age_at_onset + baseline_vc_rel +
     I(delta_fs^(1 / 3)) + I(diagnostic_delay^(1 / 3)) +
@@ -80,7 +80,7 @@ write_xlsx(
 )
 
 q3_diagnosis_niv.mcox <- with(
-  q3_select_event(q3_data_w.mids, "diagnosis", "niv", censor_after_epochs = 10 * 12),
+  q3_select_event(q3_data_recent_w.mids, "diagnosis", "niv", censor_after_epochs = 10 * 12),
   coxme(Surv(time, status) ~
     site_of_onset + sex + age_at_onset + baseline_vc_rel +
     I(delta_fs^(1 / 3)) + I(diagnostic_delay^(1 / 3)) +
@@ -98,7 +98,7 @@ write_xlsx(
 )
 
 q3_diagnosis_gastrostomy.mcox <- with(
-  q3_select_event(q3_data_w.mids, "diagnosis", "gastrostomy", censor_after_epochs = 10 * 12),
+  q3_select_event(q3_data_recent_w.mids, "diagnosis", "gastrostomy", censor_after_epochs = 10 * 12),
   coxme(Surv(time, status) ~
     site_of_onset + sex + age_at_onset + baseline_vc_rel +
     I(delta_fs^(1 / 3)) + I(diagnostic_delay^(1 / 3)) +
@@ -116,7 +116,7 @@ write_xlsx(
 )
 
 q3_diagnosis_death.mcox <- with(
-  q3_select_event(q3_data_w.mids, "diagnosis", "death", censor_after_epochs = 10 * 12),
+  q3_select_event(q3_data_recent_w.mids, "diagnosis", "death", censor_after_epochs = 10 * 12),
   coxme(Surv(time, status) ~
     site_of_onset + sex + age_at_onset + baseline_vc_rel +
     I(delta_fs^(1 / 3)) + I(diagnostic_delay^(1 / 3)) +
