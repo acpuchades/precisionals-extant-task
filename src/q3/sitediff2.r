@@ -5,35 +5,31 @@ source("src/ext/common.r")
 
 ext_source("src/q3/vc_niv.r")
 
-patients.current <- filter(patients_info, year_of_diagnosis >= 2010)
-patients.current.niv <- filter(patients.current, niv == TRUE)
-
 ext_interactive({
   q3_sitediff2_output_dir <- file.path(q3_output_root_dir, "sitediff2")
   dir.create(q3_sitediff2_output_dir, showWarnings = FALSE, recursive = TRUE)
 
   sink(file.path(q3_sitediff2_output_dir, "niv-per-site.txt"))
   cat("# NIV STATUS PER SITE (2010-2022)\n\n")
-  patients.current %>%
-    filter(vital_status == "Deceased") %$%
+  patients_info.current %$%
     q3_summary_table(site, niv, useNA = "ifany") %>%
     print()
   sink()
 
-  sink(file.path(q3_sitediff2_output_dir, "vc-niv-xtab-per-site.txt"))
+  sink(file.path(q3_sitediff2_output_dir, "vc-at-niv-per-site.txt"))
   cat("# VC AT NIV START PER SITE (2010-2022)\n\n")
-  patients.current.niv %$%
+  patients_info.current.niv %$%
     q3_summary_table(site, vc_at_niv_interval, useNA = "ifany") %>%
     print()
   cat("\n\n")
 
   cat("# ANOVA: VC AT NIV START PER SITE (2010-2022)\n\n")
-  aov(vc_at_niv ~ site, data = patients.current.niv) %>%
+  aov(vc_at_niv ~ site, data = patients_info.current.niv) %>%
     summary() %>%
     print()
   sink()
 
-  patients.current.niv %>%
+  patients_info.current.niv %>%
     drop_na(vc_at_niv) %>%
     mutate(site = fct_drop(site)) %>%
     ggplot(aes(sample = vc_at_niv)) +
@@ -76,7 +72,7 @@ ext_interactive({
     theme(legend.position = "none")
   ggsave(file.path(q3_sitediff2_output_dir, "vc-at-niv-overall.boxplot.png"))
 
-  patients.current.niv %>%
+  patients_info.current.niv %>%
     drop_na(vc_at_niv) %>%
     ggplot(aes(vc_at_niv, fill = site)) +
     geom_density(alpha = .3) +
@@ -85,7 +81,7 @@ ext_interactive({
     theme_bw()
   ggsave(file.path(q3_sitediff2_output_dir, "vc-at-niv-after-2010.density.png"))
 
-  patients.current.niv %>%
+  patients_info.current.niv %>%
     drop_na(vc_at_niv) %>%
     ggplot(aes(x = site, y = vc_at_niv, fill = site)) +
     geom_boxplot() +

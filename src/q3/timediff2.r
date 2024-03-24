@@ -25,7 +25,7 @@ ext_interactive({
         drop_na(year_of_diagnosis, age_at_onset) %>%
         ggplot(aes(year_of_diagnosis, age_at_onset)) +
         geom_jitter(aes(color = site), size = 0.5, width = 0.5, height = 0.5) +
-        geom_smooth(method = "lm") +
+        geom_smooth(formula = y ~ x, method = "lm") +
         labs(
             title = "Year of diagnosis vs Age at onset",
             x = "Year of diagnosis", y = "Age at onset", color = "Site"
@@ -63,22 +63,19 @@ ext_interactive({
 
     sink(file.path(q3_timediff_output_dir, "niv-per-period.txt"))
     cat("# NIV STATUS PER PERIOD\n\n")
-    patients_info %>%
-        filter(vital_status == "Deceased") %$%
+    patients_info %$%
         q3_summary_table(diagnosis_period, niv, useNA = "ifany") %>%
         print()
     sink()
 
     sink(file.path(q3_timediff_output_dir, "vc-niv-xtab-per-period.txt"))
     cat("# VC AT NIV START PER PERIOD\n\n")
-    patients_info %>%
-        filter(niv == TRUE) %$%
+    patients_info.niv %$%
         q3_summary_table(diagnosis_period, vc_at_niv_interval, useNA = "ifany") %>%
         print()
     cat("\n\n")
 
-    patients_info %>%
-        filter(niv == TRUE) %>%
+    patients_info.niv %>%
         aov(vc_at_niv ~ diagnosis_period, data = .) %>%
         summary() %>%
         print()
@@ -94,8 +91,7 @@ ext_interactive({
         theme_bw()
     ggsave(file.path(q3_timediff_output_dir, "vc-at-niv.density.png"))
 
-    patients_info %>%
-        filter(niv == TRUE) %>%
+    patients_info.niv %>%
         drop_na(diagnosis_period, vc_at_niv) %>%
         mutate(diagnosis_period = fct_drop(diagnosis_period)) %>%
         ggplot(aes(x = diagnosis_period, y = vc_at_niv, fill = diagnosis_period)) +

@@ -47,9 +47,10 @@ time_of_niv <- time_of_niv_as_reported %>%
 vc_assessments <- ext_resp %>%
   select(id, date_of_assessment, age_at_assessment, vc_rel) %>%
   drop_na(vc_rel) %>%
-  left_join(
-    ext_baseline %>% select(id, date_of_baseline, age_at_baseline),
-    by = "id"
+  mutate(
+    date_of_baseline = min(date_of_assessment),
+    age_at_baseline = min(age_at_assessment),
+    .by = "id"
   ) %>%
   mutate(
     .after = id, time_from_baseline = coalesce(
@@ -62,21 +63,17 @@ vc_assessments <- ext_resp %>%
 
 vc_and_niv_assessments <- vc_assessments %>%
   mutate(time_of_last_vc_assessment = time_from_baseline) %>%
-  bind_rows(
-    niv_assessments %>%
-      semi_join(vc_assessments, by = "id") %>%
-      mutate(time_of_last_niv_assessment = time_from_baseline)
-  ) %>%
+  bind_rows(niv_assessments %>% mutate(
+    time_of_last_niv_assessment = time_from_baseline
+  )) %>%
   group_by(id) %>%
   arrange(time_from_baseline, .by_group = TRUE) %>%
   fill(vc_rel, time_of_last_vc_assessment, niv, time_of_last_niv_assessment) %>%
   ungroup() %>%
-  mutate(
-    vc_rel = if_else(
-      (time_from_baseline - time_of_last_vc_assessment) <= dmonths(6),
-      vc_rel, NA
-    )
-  )
+  mutate(vc_rel = if_else(
+    (time_from_baseline - time_of_last_vc_assessment) <= dmonths(6),
+    vc_rel, NA
+  ))
 
 vc_at_niv_start <- vc_and_niv_assessments %>%
   filter(niv == TRUE) %>%
@@ -105,3 +102,6 @@ patients_info <- q3_base %>%
   left_join(vc_at_niv_start, by = "id")
 
 patients_info.niv <- filter(patients_info, niv == TRUE)
+
+patients_info.current <- filter(patients_info, year_of_diagnosis >= 2010)
+patients_info.current.niv <- filter(patients_info.niv, year_of_diagnosis >= 2010)
