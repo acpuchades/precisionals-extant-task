@@ -14,7 +14,7 @@ dir.create(q3_mcox_output_dir, showWarnings = FALSE, recursive = TRUE)
 q3_birth_onset.mcox <- with(
   q3_select_event(q3_data_w.mids, "birth", "onset", censor_after_epochs = 100 * 12, event_required = TRUE),
   coxme(Surv(time, status) ~
-    sex + c9orf72_status + sod1_status + fus_status + tardbp_status + (1 | site))
+    sex + site_of_onset + c9orf72_status + sod1_status + fus_status + tardbp_status + (1 | site))
 )
 
 png(file.path(q3_mcox_output_dir, "birth-to-onset.png"), width = 1800, height = 1800)
