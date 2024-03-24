@@ -16,10 +16,11 @@ source("src/ext/common.r")
 
 ext_source("src/q3/common.r")
 
-q3_output_data_path <- file.path(q3_output_root_dir, "data.rds")
-q3_output_data_w_path <- file.path(q3_output_root_dir, "data_w.rds")
-q3_output_base_data_path <- file.path(q3_output_root_dir, "base.rds")
-q3_output_t2e_data_path <- file.path(q3_output_root_dir, "event-times.rds")
+q3_timetoevent_output_dir <- file.path(q3_output_root_dir, "t2e")
+q3_timetoevent_data_path <- file.path(q3_timetoevent_output_dir, "data.rds")
+q3_timetoevent_data_w_path <- file.path(q3_timetoevent_output_dir, "data_w.rds")
+q3_timetoevent_base_data_path <- file.path(q3_timetoevent_output_dir, "base.rds")
+q3_timetoevent_events_data_path <- file.path(q3_timetoevent_output_dir, "events.rds")
 
 q3_as_causal_gene <- function(x) {
     factor(x, levels = c(
@@ -34,12 +35,12 @@ q3_as_site_of_onset <- function(x) {
 }
 
 if (!exists("q3_data") || !exists("q3_data_w")) {
-    if (file.exists(q3_output_data_path)) {
+    if (file.exists(q3_timetoevent_output_dir)) {
         q3_show_progress("Loading cached time to event data", {
-            q3_data <- readRDS(q3_output_data_path)
-            q3_data_w <- readRDS(q3_output_data_w_path)
-            q3_base <- readRDS(q3_output_base_data_path)
-            q3_event_times <- readRDS(q3_output_t2e_data_path)
+            q3_data <- readRDS(q3_timetoevent_data_path)
+            q3_data_w <- readRDS(q3_timetoevent_data_w_path)
+            q3_base <- readRDS(q3_timetoevent_base_data_path)
+            q3_events <- readRDS(q3_timetoevent_events_data_path)
         })
     } else {
         q3_show_progress("Loading the dataset", suppressMessages({
@@ -301,7 +302,7 @@ if (!exists("q3_data") || !exists("q3_data_w")) {
         # NOTE: explicit casts are necessary because pmin seems to get confused
         #       when mixing NA days (POSIXct) and dyears(x) (lubridate) types.
         q3_show_progress("Calculating time to events", {
-            q3_event_times <- ext_main %>%
+            q3_events <- ext_main %>%
                 left_join(q3_time_to_kings, by = "id") %>%
                 left_join(q3_time_to_mitos, by = "id") %>%
                 left_join(q3_time_to_walking_support, by = "id") %>%
@@ -524,7 +525,7 @@ if (!exists("q3_data") || !exists("q3_data_w")) {
 
         q3_data <- q3_base %>%
             q3_add_derived_variables() %>%
-            left_join(q3_event_times, by = "id")
+            left_join(q3_events, by = "id")
 
         q3_data_w <- q3_data %>%
             select(-c(time_to_event, time_to_loss)) %>%
@@ -548,11 +549,11 @@ if (!exists("q3_data") || !exists("q3_data_w")) {
             )
 
         q3_show_progress("Exporting results", {
-            dir.create(q3_output_root_dir, recursive = TRUE, showWarnings = FALSE)
-            q3_base %>% saveRDS(q3_output_base_data_path)
-            q3_data %>% saveRDS(q3_output_data_path)
-            q3_data_w %>% saveRDS(q3_output_data_w_path)
-            q3_event_times %>% saveRDS(q3_output_t2e_data_path)
+            dir.create(q3_timetoevent_output_dir, recursive = TRUE, showWarnings = FALSE)
+            q3_base %>% saveRDS(q3_timetoevent_base_data_path)
+            q3_data %>% saveRDS(q3_timetoevent_data_path)
+            q3_data_w %>% saveRDS(q3_timetoevent_data_w_path)
+            q3_events %>% saveRDS(q3_timetoevent_events_data_path)
         })
     }
 

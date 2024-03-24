@@ -58,7 +58,7 @@ if (file.exists(q3_output_imputed_data_path)) {
             by = q3_header_cols
         ) %>%
         q3_add_derived_variables() %>%
-        left_join(q3_event_times, by = "id", relationship = "many-to-many")
+        left_join(q3_events, by = "id", relationship = "many-to-many")
 
     q3_show_progress("Exporting results", {
         q3_base.mids %>% saveRDS(q3_output_base_mids_data_path)
