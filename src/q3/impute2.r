@@ -169,24 +169,26 @@ exclude.out <- c(
   cumhaz_onset_to_milestones_after_diagnosis_cols
 )
 
-if (file.exists(q3_output_imputed_data_path) & file.exists(q3_output_imputed_data_recent_path)) {
-  q3_show_progress("Loading cached imputed data", {
-    q3_data_w.mids <- readRDS(q3_output_imputed_data_path)
-    q3_data_recent_w.mids <- readRDS(q3_output_imputed_data_recent_path)
-  })
-} else {
-  set.seed(1234)
-  dir.create(q3_impute_root_dir, showWarnings = FALSE, recursive = TRUE)
+if (!exists("q3_data_w.mids") || !exists("q3_data_recent_w.mids")) {
+  if (file.exists(q3_output_imputed_data_path) & file.exists(q3_output_imputed_data_recent_path)) {
+    q3_show_progress("Loading cached imputed data", {
+      q3_data_w.mids <- readRDS(q3_output_imputed_data_path)
+      q3_data_recent_w.mids <- readRDS(q3_output_imputed_data_recent_path)
+    })
+  } else {
+    set.seed(1234)
+    dir.create(q3_impute_root_dir, showWarnings = FALSE, recursive = TRUE)
 
-  q3_show_progress("Imputing data for the entire cohort", {
-    q3_data_w.mids <- q3_impute_data(q3_data_w, exclude.in = exclude.in, exclude.out = exclude.out)
-    saveRDS(q3_data_w.mids, q3_output_imputed_data_path)
-  })
+    q3_show_progress("Imputing data for the entire cohort", {
+      q3_data_w.mids <- q3_impute_data(q3_data_w, exclude.in = exclude.in, exclude.out = exclude.out)
+      saveRDS(q3_data_w.mids, q3_output_imputed_data_path)
+    })
 
-  q3_show_progress("Imputing data for the recent cohort", {
-    q3_data_recent_w.mids <- q3_impute_data(q3_data_recent_w, exclude.in = exclude.in, exclude.out = exclude.out)
-    saveRDS(q3_data_recent_w.mids, q3_output_imputed_data_recent_path)
-  })
+    q3_show_progress("Imputing data for the recent cohort", {
+      q3_data_recent_w.mids <- q3_impute_data(q3_data_recent_w, exclude.in = exclude.in, exclude.out = exclude.out)
+      saveRDS(q3_data_recent_w.mids, q3_output_imputed_data_recent_path)
+    })
+  }
 }
 
 ext_interactive({
