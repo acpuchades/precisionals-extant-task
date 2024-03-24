@@ -132,11 +132,11 @@ if (!exists("q3_data_w.mids") || !exists("q3_data_recent_w.mids")) {
 }
 
 ext_interactive({
-  # q3_save_impute_diagnostics(
-  #  q3_data_w.mids, file.path(q3_impute_global_data_dir, ""),
-  #  exclude = exclude.out, exclude.out = cumhaz_cols,
-  #  pmat.label = FALSE, pmat.rotate.x = 90, pmat.size = 3
-  # )
+  q3_save_impute_diagnostics(
+    q3_data_w.mids, file.path(q3_impute_global_data_dir, ""),
+    exclude = exclude.out, exclude.out = cumhaz_cols,
+    pmat.label = FALSE, pmat.rotate.x = 90, pmat.size = 3
+  )
 
   dir.create(q3_impute_recent_data_dir, recursive = TRUE, showWarnings = FALSE)
   q3_save_impute_diagnostics(
