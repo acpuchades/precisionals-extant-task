@@ -1,3 +1,4 @@
+library(tibble)
 library(writexl)
 
 source("src/ext/common.r")
@@ -75,6 +76,67 @@ q3_calculate_cohort_categorical_stats.mids <- function(mids, ...) {
   stats
 }
 
+q3_compare_cohort_numeric_fields <- function(x, ...) {
+  UseMethod("q3_compare_cohort_numeric_fields", x)
+}
+
+q3_compare_cohort_numeric_fields.data.frame <- function(target, ref, ref.group = "ref", target.group = "target", exclude = NULL) {
+  bind_rows(
+    target %>% select(where(is.numeric), -all_of(exclude)) %>% mutate(group = target.group, .before = everything()),
+    ref %>% select(where(is.numeric), -all_of(exclude)) %>% mutate(group = ref.group, .before = everything())
+  ) %>%
+    pivot_longer(-group) %>%
+    reframe(
+      lm(value ~ group) %>%
+        tidy(conf.int = TRUE) %>%
+        filter(term == str_c("group", target.group)) %>%
+        select(-term),
+      .by = name
+    ) %>%
+    mutate(target = target.group, ref = ref.group, .before = everything())
+}
+
+q3_compare_cohort_numeric_fields.mids <- function(target.mids, ref, target.group = "target", ref.group = "ref", exclude = NULL) {
+  stats <- NULL
+  num.cols <- colnames(target.mids$data %>% select(where(is.numeric)))
+  groups <- cbind(target.mids, group = rep(target.group, nrow(complete(target.mids))))
+  groups <- rbind(groups, mutate(ref, group = ref.group))
+  for (col in num.cols) {
+    results <- with(groups, lm(reformulate("group", col)))
+    stats <- bind_rows(stats, bind_cols(
+      summary(pool(results), conf.int = TRUE) %>%
+        filter(term == paste0("group", target.group)) %>%
+        select(-term, -df),
+      name = col
+    ))
+  }
+
+  mutate(stats, target = target.group, ref = ref.group, .before = everything())
+}
+
+q3_compare_cohort_categorical_fields <- function(x, ...) {
+  UseMethod("q3_compare_cohort_categorical_fields", x)
+}
+
+q3_compare_cohort_categorical_fields.data.frame <- function(target, ref, target.group = "target", ref.group = "ref", exclude = NULL) {
+  bind_rows(
+    target %>%
+      select(-where(is.numeric), -all_of(exclude)) %>%
+      mutate(group = target.group, .before = everything()),
+    ref %>%
+      select(-where(is.numeric), -all_of(exclude)) %>%
+      mutate(group = ref.group, .before = everything())
+  ) %>%
+    mutate(across(everything(), as.character)) %>%
+    pivot_longer(-group) %>%
+    reframe(
+      chisq.test(table(group, value)) %>% tidy(),
+      .by = name
+    ) %>%
+    mutate(target = target.group, ref = ref.group, .before = everything()) %>%
+    relocate(method, .after = name)
+}
+
 q3_cohort.ref <- q3_base %>%
   q3_add_derived_variables()
 
@@ -97,10 +159,17 @@ ext_interactive({
       q3_calculate_cohort_numeric_stats(q3_cohort.target) %>% mutate(cohort = "target", .before = everything()),
       q3_calculate_cohort_numeric_stats(q3_cohort.imputed) %>% mutate(cohort = "target.imputed", .before = everything())
     ) %>% arrange(name, cohort),
+    "Numeric Tests" = bind_rows(
+      q3_compare_cohort_numeric_fields(q3_cohort.target, q3_cohort.ref, target.group = "target", ref.group = "ref", exclude = "diagnosis_period"),
+      q3_compare_cohort_numeric_fields(q3_cohort.imputed, q3_cohort.target, target.group = "target.imputed", ref.group = "target", exclude = c("riluzole_use", "diagnosis_period"))
+    ) %>% arrange(name, target),
     "Categorical" = bind_rows(
       q3_calculate_cohort_categorical_stats(q3_cohort.ref) %>% mutate(cohort = "ref", .before = everything()),
       q3_calculate_cohort_categorical_stats(q3_cohort.target) %>% mutate(cohort = "target", .before = everything()),
       q3_calculate_cohort_categorical_stats(q3_cohort.imputed) %>% mutate(cohort = "target.imputed", .before = everything())
-    ) %>% arrange(name, value, cohort)
+    ) %>% arrange(name, value, cohort),
+    "Categorical Tests" = bind_rows(
+      q3_compare_cohort_categorical_fields(q3_cohort.target, q3_cohort.ref, target.group = "target", ref.group = "ref", exclude = c("id", "diagnosis_period")),
+    )
   ), file.path(q3_cohorts_root_dir, "cohorts-stats.xlsx"))
 })
