@@ -11,7 +11,8 @@ ext_source("src/q3/impute2.r")
 q3_run_stcox_analysis <- function(data, prefix) {
     q3_birth_onset.stcox <- with(
         q3_select_event(data, "birth", "onset", censor_after_epochs = 100 * 12, event_required = TRUE),
-        coxph(Surv(time, status) ~ year_of_diagnosis + strata(site, sex, causal_gene))
+        coxph(Surv(time, status) ~ year_of_diagnosis +
+            strata(site, sex, c9orf72_status, sod1_status, tardbp_status, fus_status))
     )
 
     png(str_c(prefix, "birth-to-onset.png"), width = 1800, height = 1800)
@@ -27,7 +28,7 @@ q3_run_stcox_analysis <- function(data, prefix) {
         q3_select_event(data, "onset", "diagnosis", censor_after_epochs = 10 * 12, event_required = TRUE),
         coxph(Surv(time, status) ~
             age_at_onset + baseline_vc_rel + I(delta_fs^(1 / 3)) +
-            strata(site_of_onset, sex, causal_gene) +
+            strata(site_of_onset, sex, c9orf72_status, sod1_status, tardbp_status, fus_status) +
             site)
     )
 
@@ -44,7 +45,7 @@ q3_run_stcox_analysis <- function(data, prefix) {
         q3_select_event(data, "diagnosis", "gastrostomy", censor_after_epochs = 10 * 12),
         coxph(Surv(time, status) ~
             age_at_onset + baseline_vc_rel + I(delta_fs^(1 / 3)) + I(diagnostic_delay^(1 / 3)) +
-            strata(site_of_onset) + strata(sex) + strata(causal_gene) +
+            strata(site_of_onset, sex, c9orf72_status, sod1_status, tardbp_status, fus_status) +
             site)
     )
 
@@ -61,7 +62,7 @@ q3_run_stcox_analysis <- function(data, prefix) {
         q3_select_event(data, "diagnosis", "niv", censor_after_epochs = 10 * 12),
         coxph(Surv(time, status) ~
             age_at_onset + baseline_vc_rel + I(delta_fs^(1 / 3)) + I(diagnostic_delay^(1 / 3)) +
-            strata(site_of_onset) + strata(sex) + strata(causal_gene) +
+            strata(site_of_onset, sex, c9orf72_status, sod1_status, tardbp_status, fus_status) +
             site)
     )
 
@@ -78,7 +79,7 @@ q3_run_stcox_analysis <- function(data, prefix) {
         q3_select_event(data, "diagnosis", "death", censor_after_epochs = 10 * 12),
         coxph(Surv(time, status) ~
             age_at_onset + baseline_vc_rel + I(delta_fs^(1 / 3)) + I(diagnostic_delay^(1 / 3)) +
-            strata(site_of_onset) + strata(sex) + strata(causal_gene) +
+            strata(site_of_onset, sex, c9orf72_status, sod1_status, tardbp_status, fus_status) +
             site)
     )
 
