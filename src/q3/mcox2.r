@@ -130,6 +130,23 @@ q3_run_mcox_analysis <- function(data, prefix) {
     summary(pool(q3_diagnosis_death.mcox), exponentiate = TRUE, conf.int = TRUE),
     str_c(prefix, "diagnosis-to-death.xlsx")
   )
+
+  q3_onset_death.mcox <- with(
+    q3_select_event(data, "onset", "death", censor_after_epochs = 10 * 12),
+    coxme(Surv(time, status) ~
+      site_of_onset + sex + age_at_onset + baseline_vc_rel + I(delta_fs^(1 / 3)) +
+      c9orf72_status + sod1_status + fus_status + tardbp_status +
+      (1 | site))
+  )
+
+  png(str_c(prefix, "onset-to-death.png"), width = 1800, height = 1800)
+  q3_onset_death.zph <- q3_plot_coxph(q3_onset_death.mcox$analyses[[1]])
+  dev.off()
+
+  write_xlsx(
+    summary(pool(q3_onset_death.mcox), exponentiate = TRUE, conf.int = TRUE),
+    str_c(prefix, "onset-to-death.xlsx")
+  )
 }
 
 ext_interactive({
