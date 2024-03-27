@@ -104,7 +104,7 @@ q3_select_event.mids <- function(mids, origin, event, event_required = FALSE, ce
     }
 
     if (event_required) {
-        data <- mutate(data, status = na_if(status, status != 1))
+        data <- mutate(data, status = if_else(status == 1, status, NA_integer_))
     }
 
     as.mids(data)
