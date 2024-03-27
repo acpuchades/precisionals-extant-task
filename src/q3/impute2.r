@@ -48,7 +48,7 @@ q3_save_impute_diagnostics <- function(mids, prefix, exclude = NULL, exclude.out
   ggsave(str_c(prefix, "predictor-matrix.png"), bg = "white", ...)
 
   numeric_cols <- complete(mids) %>%
-    select(where(is.numeric) & !all_of(c(exclude, exclude.out))) %>%
+    select(where(is.numeric) & !any_of(c(exclude, exclude.out))) %>%
     colnames()
 
   for (col in numeric_cols) {
@@ -107,8 +107,8 @@ exclude.out <- c(
   onset_to_milestones_after_diagnosis_cols
 )
 
-if (!exists("q3_data_w.mids") || !exists("q3_data_recent_w.mids")) {
-  if (file.exists(q3_output_imputed_global_data_path) & file.exists(q3_output_imputed_recent_data_path)) {
+if (!exists("q3_data_recent_w.mids")) {
+  if (file.exists(q3_output_imputed_recent_data_path)) {
     q3_show_progress("Loading cached imputed data", {
       q3_data_w.mids <- readRDS(q3_output_imputed_global_data_path)
       q3_data_recent_w.mids <- readRDS(q3_output_imputed_recent_data_path)
@@ -116,13 +116,7 @@ if (!exists("q3_data_w.mids") || !exists("q3_data_recent_w.mids")) {
   } else {
     set.seed(1234)
     dir.create(q3_impute_root_dir, recursive = TRUE, showWarnings = FALSE)
-    dir.create(q3_impute_global_data_dir, recursive = TRUE, showWarnings = FALSE)
     dir.create(q3_impute_recent_data_dir, recursive = TRUE, showWarnings = FALSE)
-
-    q3_show_progress("Imputing data for the entire cohort", {
-      q3_data_w.mids <- q3_impute_data(q3_data_w, exclude = exclude.in)
-      saveRDS(q3_data_w.mids, q3_output_imputed_global_data_path)
-    })
 
     q3_show_progress("Imputing data for the recent cohort", {
       q3_data_recent_w.mids <- q3_impute_data(q3_data_recent_w, exclude = exclude.in)
@@ -132,13 +126,6 @@ if (!exists("q3_data_w.mids") || !exists("q3_data_recent_w.mids")) {
 }
 
 ext_interactive({
-  q3_save_impute_diagnostics(
-    q3_data_w.mids, file.path(q3_impute_global_data_dir, ""),
-    exclude = exclude.out, exclude.out = cumhaz_cols,
-    pmat.label = FALSE, pmat.rotate.x = 90, pmat.size = 3
-  )
-
-  dir.create(q3_impute_recent_data_dir, recursive = TRUE, showWarnings = FALSE)
   q3_save_impute_diagnostics(
     q3_data_recent_w.mids, file.path(q3_impute_recent_data_dir, ""),
     exclude = exclude.out, exclude.out = cumhaz_cols, pmat.label = FALSE,

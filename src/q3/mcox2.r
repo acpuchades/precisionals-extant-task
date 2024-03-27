@@ -150,12 +150,6 @@ q3_run_mcox_analysis <- function(data, prefix) {
 }
 
 ext_interactive({
-  q3_show_progress("Performing mcox analysis on global cohort", {
-    q3_mcox_global_output_dir <- file.path(q3_output_root_dir, "mcox2.global")
-    dir.create(q3_mcox_global_output_dir, showWarnings = FALSE, recursive = TRUE)
-    q3_run_mcox_analysis(q3_data_w.mids, file.path(q3_mcox_global_output_dir, ""))
-  })
-
   q3_show_progress("Performing mcox analysis on recent cohort", {
     q3_mcox_recent_output_dir <- file.path(q3_output_root_dir, "mcox2.recent")
     dir.create(q3_mcox_recent_output_dir, showWarnings = FALSE, recursive = TRUE)

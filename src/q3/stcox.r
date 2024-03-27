@@ -94,12 +94,6 @@ q3_run_stcox_analysis <- function(data, prefix) {
 }
 
 ext_interactive({
-    q3_show_progress("Performing stcox analysis on global cohort", {
-        q3_stcox_global_output_dir <- file.path(q3_output_root_dir, "stcox.global")
-        dir.create(q3_stcox_global_output_dir, recursive = TRUE, showWarnings = FALSE)
-        q3_run_stcox_analysis(q3_data_w.mids, file.path(q3_stcox_global_output_dir, ""))
-    })
-
     q3_show_progress("Performing stcox analysis on recent cohort", {
         q3_stcox_recent_output_dir <- file.path(q3_output_root_dir, "stcox.recent")
         dir.create(q3_stcox_recent_output_dir, recursive = TRUE, showWarnings = FALSE)
