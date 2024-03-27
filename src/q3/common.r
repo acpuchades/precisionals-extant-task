@@ -139,11 +139,17 @@ q3_add_derived_variables <- function(df) {
             cognitive_onset ~ "Cognitive",
             respiratory_onset ~ "Respiratory",
         )),
+        genetically_tested = (
+            !is.na(c9orf72_status) |
+                !is.na(sod1_status) |
+                !is.na(tardbp_status) |
+                !is.na(fus_status)
+        ),
         altered_genes = (
-            (c9orf72_status == "Positive") +
-                (sod1_status == "Positive") +
-                (fus_status == "Positive") +
-                (tardbp_status == "Positive")
+            (!is.na(c9orf72_status) & (c9orf72_status == "Positive")) +
+                (!is.na(sod1_status) & (sod1_status == "Positive")) +
+                (!is.na(fus_status) & (fus_status == "Positive")) +
+                (!is.na(tardbp_status) & (tardbp_status == "Positive"))
         ),
         causal_gene = q3_as_causal_gene(case_when(
             altered_genes > 1 ~ "Multiple",
