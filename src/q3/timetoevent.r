@@ -546,7 +546,8 @@ if (!exists("q3_data") || !exists("q3_data_w")) {
                 names_from = event,
                 values_from = c(status, time, cumhaz),
                 unused_fn = first
-            )
+            ) %>%
+            select(-(starts_with("cumhaz_onset_") & !matches("cumhaz_onset_diagnosis")))
 
         q3_show_progress("Exporting results", {
             dir.create(q3_timetoevent_output_dir, recursive = TRUE, showWarnings = FALSE)
