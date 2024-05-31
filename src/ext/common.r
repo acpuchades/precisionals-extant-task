@@ -16,7 +16,7 @@ ext_source <- function(path) {
 
     ext_source_level__ <<- ext_source_level__ - 1
     if (ext_source_level__ <= 0) {
-        rm(ext_source_level__)
+        rm(ext_source_level__, pos = ".GlobalEnv")
     }
 }
 
