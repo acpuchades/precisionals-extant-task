@@ -65,28 +65,21 @@ q3_group_labels <- list(
     fus_status = "FUS status",
     causal_gene = "causal gene",
     site_of_onset = "site of onset",
-    riluzole_use = "riluzole use"
+    riluzole_use = "riluzole use",
+    sod1_variant_p = "SOD1 variant"
 )
 
 q3_clinical_milestones <- names(q3_event_labels)[
     !(names(q3_event_labels) %in% c("onset", "diagnosis"))
 ]
 
-q3_plots <- list(
+q3_kmeier_plots <- list(
     list(
         origins = "birth",
         events = "onset",
         event_required = TRUE,
         censor_after = dyears(100),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
-    ),
-    list(
-        risk_tables = TRUE,
-        origins = "birth",
-        events = "onset",
-        event_required = TRUE,
-        censor_after = dyears(100),
-        output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "birth",
@@ -97,28 +90,11 @@ q3_plots <- list(
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     ),
     list(
-        risk_tables = TRUE,
-        origins = "birth",
-        events = "onset",
-        event_required = TRUE,
-        censor_after = dyears(100),
-        groups = names(q3_group_labels),
-        output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
-    ),
-    list(
         origins = "onset",
         events = "diagnosis",
         event_required = TRUE,
         censor_after = dyears(10),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
-    ),
-    list(
-        risk_tables = TRUE,
-        origins = "onset",
-        events = "diagnosis",
-        event_required = TRUE,
-        censor_after = dyears(10),
-        output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = "onset",
@@ -129,26 +105,10 @@ q3_plots <- list(
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
     ),
     list(
-        risk_tables = TRUE,
-        origins = "onset",
-        events = "diagnosis",
-        event_required = TRUE,
-        censor_after = dyears(10),
-        groups = names(q3_group_labels),
-        output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
-    ),
-    list(
         origins = c("onset", "diagnosis"),
         events = q3_clinical_milestones,
         censor_after = dyears(10),
         output_name = "kmeier/@overall/time-from-{origin}-to-{event}"
-    ),
-    list(
-        risk_tables = TRUE,
-        origins = c("onset", "diagnosis"),
-        events = q3_clinical_milestones,
-        censor_after = dyears(10),
-        output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
     ),
     list(
         origins = c("onset", "diagnosis"),
@@ -156,16 +116,63 @@ q3_plots <- list(
         groups = names(q3_group_labels),
         censor_after = dyears(10),
         output_name = "kmeier/{group}/time-from-{origin}-to-{event}"
-    ),
-    list(
-        risk_tables = TRUE,
-        origins = c("onset", "diagnosis"),
-        events = q3_clinical_milestones,
-        groups = names(q3_group_labels),
-        censor_after = dyears(10),
-        output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
     )
 )
+
+if (TRUE) {
+    q3_kmeier_plots <- list(
+        q3_kmeier_plots,
+        list(
+            risk_tables = TRUE,
+            origins = "birth",
+            events = "onset",
+            event_required = TRUE,
+            censor_after = dyears(100),
+            output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
+        ),
+        list(
+            risk_tables = TRUE,
+            origins = "birth",
+            events = "onset",
+            event_required = TRUE,
+            censor_after = dyears(100),
+            groups = names(q3_group_labels),
+            output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
+        ),
+        list(
+            risk_tables = TRUE,
+            origins = "onset",
+            events = "diagnosis",
+            event_required = TRUE,
+            censor_after = dyears(10),
+            output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
+        ),
+        list(
+            risk_tables = TRUE,
+            origins = "onset",
+            events = "diagnosis",
+            event_required = TRUE,
+            censor_after = dyears(10),
+            groups = names(q3_group_labels),
+            output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
+        ),
+        list(
+            risk_tables = TRUE,
+            origins = c("onset", "diagnosis"),
+            events = q3_clinical_milestones,
+            censor_after = dyears(10),
+            output_name = "kmeier.risktables/@overall/time-from-{origin}-to-{event}"
+        ),
+        list(
+            risk_tables = TRUE,
+            origins = c("onset", "diagnosis"),
+            events = q3_clinical_milestones,
+            groups = names(q3_group_labels),
+            censor_after = dyears(10),
+            output_name = "kmeier.risktables/{group}/time-from-{origin}-to-{event}"
+        )
+    )
+}
 
 q3_survival_plot_count <- function(plots) {
     count <- 0
@@ -193,6 +200,9 @@ q3_trim_survival_groups <- function(data, group) {
         data %>% filter(diagnosis_period %in% c(
             "1990-1999", "2000-2009", "2010-2019", "2020-2022"
         ))
+    } else if (group %>% str_starts("sod1_")) {
+        data %>%
+            filter(n() >= 5, .by = group)
     } else {
         data
     }
@@ -251,7 +261,7 @@ q3_save_plot <- function(plot, path, width = q3_survplots_output_width,
 
 progress_bar <- progress::progress_bar$new(
     format = "Exporting [:bar] :current/:total (:percent)",
-    total = q3_survival_plot_count(q3_plots)
+    total = q3_survival_plot_count(q3_kmeier_plots)
 )
 
 q3_data <- q3_data %>% mutate(across(
@@ -263,7 +273,7 @@ q3_data <- q3_data %>% mutate(across(
 ))
 
 progress_bar$tick(0)
-for (p in q3_plots) {
+for (p in q3_kmeier_plots) {
     for (origin in p$origins) {
         for (event in p$events) {
             if (!q3_is_valid_event_from_origin(event, origin)) {

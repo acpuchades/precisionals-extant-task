@@ -270,6 +270,25 @@ ext_main <- ext_main %>%
         ), ordered = TRUE)
     )
 
+ext_sod1_info <- read_xlsx("data/SOD1 raw data collated.xlsx") %>%
+    select(
+        patient_id = "pals_id",
+        sod1_position = "Pos",
+        sod1_zygosity = "Zygosity",
+        sod1_variant_p = "Corrected name",
+        sod1_significance = "Variant significance",
+        sod1_clinvar_name = "Name"
+    ) %>%
+    mutate(
+        across(sod1_position, as.integer),
+        across(!where(is.numeric), ~ na_if(.x, "-")),
+    )
+
+ext_main <- ext_main %>% left_join(
+    ext_sod1_info,
+    by = c(id = "patient_id")
+)
+
 ext_main.anon <- ext_main %>%
     mutate(site = factor(site, labels = str_c("Cohort ", 1:n_distinct(site)))) %>%
     arrange(site, id)

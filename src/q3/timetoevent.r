@@ -516,11 +516,11 @@ if (!exists("q3_data") || !exists("q3_data_w")) {
                 baseline_total_alsfrs = baseline_total_score,
                 bulbar_onset, spinal_onset, cognitive_onset, respiratory_onset, generalized_onset,
                 age_at_onset = calculated_age_at_onset, clinical_phenotype, year_of_diagnosis,
-                c9orf72_status, sod1_status, fus_status, tardbp_status,
+                c9orf72_status, sod1_status, fus_status, tardbp_status, sod1_variant_p,
                 diagnostic_delay = coalesce(
                     (age_at_diagnosis - age_at_onset) * 12,
                     as.duration(date_of_diagnosis - date_of_onset) / dmonths(1)
-                )
+                ),
             )
 
         q3_data <- q3_base %>%
