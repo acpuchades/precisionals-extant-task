@@ -1,0 +1,23 @@
+rix::rix(
+  project_path="./",
+  r_ver="latest-upstream",
+  r_pkgs=c(
+    "broom",
+    "coxme",
+    "ggmice",
+    "ggsci",
+    "lazyeval",
+    "mice",
+    "readxl",
+    "rix",
+    "survival",
+    "tidyverse",
+    "visdat",
+    "writexl",
+    "xfun"
+  ),
+  system_pkgs=NULL,
+  git_pkgs=NULL,
+  ide="positron",
+  overwrite=TRUE
+)

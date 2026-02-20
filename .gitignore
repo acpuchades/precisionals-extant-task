@@ -3,9 +3,10 @@
 .Rhistory
 .conda
 
-data/
+.direnv/
 output/
 
+data/
 *.xlsx
 *.png
 *.sav
