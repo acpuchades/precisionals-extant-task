@@ -5,8 +5,3 @@
 
 .direnv/
 output/
-
-data/
-*.xlsx
-*.png
-*.sav
